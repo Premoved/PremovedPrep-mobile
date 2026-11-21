@@ -1,0 +1,659 @@
+/*
+ * Android only: added after the desktop app's styles.css (angular.json).
+ *
+ * Every rule is keyed on html.android, which src/mobile/install.ts sets only inside the Android app, so
+ * the same build opened in a browser (ng serve) keeps the web look. The desktop's components keep their
+ * own styles; these override sizes for a finger and the shape of the shell, so most need !important to
+ * win over the components' encapsulated rules. The layouts follow the mockups (Design canvas
+ * "PremovedPrep Android – mockupuri tabletă și telefon").
+ *
+ *   900px and wider (tablet held sideways): the sidebar becomes an 88px rail.
+ *   600–899px (tablet held upright): phone shell; the notation panel stays fixed under the board.
+ *   under 600px (phone): phone shell, the page scrolls as on the site.
+ */
+
+/* No grey flash on every tap, which a mouse never shows on the desktop. */
+html {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* ------------------------------------------------------------------ one page at a time: no tab bar */
+
+html.android app-tab-bar {
+	display: none !important;
+}
+
+html.android .shell.tabbed {
+	height: 100vh !important;
+	height: 100dvh !important;
+}
+
+/* ------------------------------------------------------------------ 900px and wider: the rail */
+
+@media (min-width: 900px) {
+	html.android .sidebar.collapsed {
+		width: 100px !important;
+		padding: 12px 0 10px !important;
+	}
+
+	html.android .sidebar.collapsed .brand {
+		min-height: 0 !important;
+		gap: 4px !important;
+		padding: 0 4px 10px !important;
+		margin-bottom: 6px !important;
+	}
+
+	html.android .sidebar.collapsed .brand .logo {
+		width: 48px !important;
+		height: 48px !important;
+	}
+
+	html.android .sidebar.collapsed .brand-name {
+		height: 26px !important;
+	}
+
+	/* Everything fits a tablet's height (about 720px held sideways): no scroll bar in the rail. */
+	html.android .sidebar.collapsed .rail-scroll {
+		scrollbar-width: none !important;
+	}
+
+	html.android .sidebar.collapsed .rail-scroll::-webkit-scrollbar {
+		display: none !important;
+	}
+
+	html.android .sidebar.collapsed .agent-slot {
+		padding-bottom: 4px !important;
+	}
+
+	html.android .sidebar.collapsed .brand-name-line {
+		opacity: 0 !important;
+		pointer-events: none !important;
+	}
+
+	html.android .sidebar.collapsed .brand-name-stack {
+		opacity: 1 !important;
+		font-size: 10.5px !important;
+		pointer-events: auto !important;
+	}
+
+	html.android .sidebar.collapsed nav {
+		gap: 2px !important;
+		padding: 0 6px !important;
+	}
+
+	html.android .sidebar.collapsed .nav-item {
+		flex-direction: column !important;
+		justify-content: center !important;
+		gap: 4px !important;
+		min-height: 66px !important;
+		padding: 6px 4px !important;
+		border-radius: 12px !important;
+		text-align: center !important;
+	}
+
+	html.android .sidebar.collapsed .nav-item .icon {
+		width: 40px !important;
+		height: 40px !important;
+	}
+
+	html.android .sidebar.collapsed nav .nav-item .nav-label {
+		display: block !important;
+		max-width: none !important;
+		opacity: 1 !important;
+		width: 100% !important;
+		overflow: hidden !important;
+		white-space: nowrap !important;
+		text-overflow: ellipsis !important;
+		font-size: 11px !important;
+		line-height: 1.2 !important;
+	}
+
+	/* Short names where the full ones do not fit the rail; the menu (under 900px) keeps the full names. */
+	html.android .sidebar.collapsed nav .nav-item:is([href^='/analysis'], [href^='/search'], [href^='/resources']) .nav-label {
+		font-size: 0 !important;
+	}
+
+	html.android .sidebar.collapsed nav .nav-item:is([href^='/analysis'], [href^='/search'], [href^='/resources']) .nav-label::after {
+		font-size: 11px;
+	}
+
+	html.android .sidebar.collapsed nav .nav-item[href^='/analysis'] .nav-label::after {
+		content: 'Analysis';
+	}
+
+	html.android .sidebar.collapsed nav .nav-item[href^='/search'] .nav-label::after {
+		content: 'Search';
+	}
+
+	html.android .sidebar.collapsed nav .nav-item[href^='/resources'] .nav-label::after {
+		content: 'Resources';
+	}
+
+	/* Closed: Account and Preferences side by side (Sign out and the theme are in the open menu), then
+	   Terms and Support as icons. */
+	html.android .sidebar.collapsed .sidebar-footer {
+		display: grid !important;
+		grid-template-columns: repeat(2, 40px) !important;
+		justify-content: center !important;
+		gap: 8px !important;
+		padding: 10px 0 0 !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer :is(.account-row, .utility-row) {
+		display: contents !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer :is(.account-icon-btn, .preferences-btn, .footer-btn) {
+		display: flex !important;
+		flex: none !important;
+		align-items: center !important;
+		justify-content: center !important;
+		gap: 0 !important;
+		width: 40px !important;
+		min-width: 0 !important;
+		height: 40px !important;
+		padding: 0 !important;
+		border: 1px solid var(--bg-border) !important;
+		border-radius: 10px !important;
+		background: var(--bg-hover) !important;
+		color: var(--text-muted) !important;
+		opacity: 1 !important;
+		text-decoration: none !important;
+		box-sizing: border-box !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer .footer-btn.login-btn {
+		grid-column: 1 / -1;
+		width: 88px !important;
+		background: var(--accent-fill) !important;
+		border-color: var(--accent-fill) !important;
+		color: #ffffff !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer :is(.nav-label, .signout-btn > span) {
+		display: none !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer svg {
+		width: 20px !important;
+		height: 20px !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer :is(.signout-btn, .theme-icon-btn) {
+		display: none !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer .support-row {
+		grid-column: 1 / -1;
+		display: flex !important;
+		gap: 8px !important;
+		padding: 0 !important;
+		width: auto !important;
+		justify-content: center !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer .support-row .source-link {
+		width: 32px !important;
+		height: 32px !important;
+		flex: none !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		padding: 0 !important;
+	}
+
+	html.android .sidebar.collapsed .sidebar-footer .support-row svg {
+		width: 18px !important;
+		height: 18px !important;
+	}
+
+	/* The menu opens with a tap on the logo (a second tap goes Home): no round button on the rail's edge. */
+	html.android .sidebar .collapse-toggle {
+		display: none !important;
+	}
+
+	/* The rail lies over the page, open or closed, and the page always keeps the rail's 100px beside it:
+	   opening and closing the menu move nothing (in the page's flow, the rail pushed the page aside while
+	   it narrowed back). Closing, it stays above the page until it has narrowed. */
+	html.android .sidebar {
+		position: fixed !important;
+		top: 0 !important;
+		left: 0 !important;
+		height: 100dvh !important;
+		transition:
+			width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+			z-index 0s linear 0.22s !important;
+	}
+
+	html.android .sidebar + .content {
+		margin-left: 100px !important;
+	}
+
+	/* Open, as wide as on the desktop. */
+	html.android .sidebar:not(.collapsed) {
+		width: 230px !important;
+		z-index: 60 !important;
+		box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18) !important;
+		transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+	}
+
+	html.android .sidebar:not(.collapsed) .nav-item {
+		min-height: 52px !important;
+	}
+
+	html.android .sidebar:not(.collapsed) .sidebar-footer :is(.account-icon-btn, .signout-btn, .preferences-btn, .theme-icon-btn) {
+		min-height: 40px !important;
+	}
+
+	html.android .sidebar:not(.collapsed) .sidebar-footer .source-link {
+		min-height: 36px !important;
+	}
+
+	/* A tap beside the open menu closes it (rail-backdrop: tools/patches.mjs). */
+	html.android .rail-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 55;
+		background: rgba(20, 18, 16, 0.32);
+	}
+}
+
+/* ------------------------------------------------------------------ under 900px: the phone shell */
+
+@media (max-width: 899.98px) {
+	html.android .shell.mobile .sidebar .nav-item {
+		min-height: 52px !important;
+	}
+
+	html.android .shell.mobile .sidebar-footer :is(.account-icon-btn, .theme-icon-btn) {
+		width: 48px !important;
+		height: 48px !important;
+	}
+
+	html.android .shell.mobile .sidebar-footer :is(.signout-btn, .preferences-btn, .footer-btn) {
+		min-height: 48px !important;
+	}
+
+	html.android .shell.mobile .sidebar-footer .source-link {
+		min-height: 44px !important;
+	}
+}
+
+/* ------------------------------------------------------------------ Analysis Board */
+
+/* A board as large as the room allows (the desktop caps it at 640px, board-layout.service.ts). */
+html.android app-analysis-board .board-shell {
+	padding: 0.5rem !important;
+}
+
+/* Beside the tools only: under them (narrow) the column stacks, and 100vh would be its height. */
+html.android app-analysis-board .board-shell:not(.narrow-layout) .board-column {
+	flex-basis: 100vh !important;
+}
+
+/* Sideways the pane narrows only until the tools move under the board (analysis-board, notationWidthAt),
+   so it has nothing to scroll. */
+@media (min-width: 900px) {
+	html.android app-analysis-board .board-pane:not(:has(.setup-overlay)) {
+		overflow: hidden !important;
+	}
+}
+
+html.android app-analysis-board .narrow-layout .board-actions-bar {
+	max-width: 100% !important;
+}
+
+/* « ‹ › » ≡ */
+html.android .board-controls {
+	gap: 6px !important;
+}
+
+html.android .board-controls button {
+	min-height: 52px !important;
+	padding: 0 !important;
+	border-radius: 10px !important;
+	font-size: 1.6rem !important;
+}
+
+/* Previous, Next, Game data, Save, Share: right-aligned, Share in the top right corner. */
+html.android app-board-toolbar .tool {
+	height: 44px !important;
+	padding: 0 0.85rem !important;
+	font-size: 0.875rem !important;
+}
+
+html.android app-board-toolbar .tool svg {
+	width: 1.2rem !important;
+	height: 1.2rem !important;
+}
+
+html.android .shell.mobile app-board-toolbar.analysis-toolbar {
+	justify-content: flex-end !important;
+}
+
+html.android .shell.mobile app-board-toolbar .spacer {
+	display: block !important;
+	flex: 1 1 auto !important;
+}
+
+/* Back: the first button, on the left; the others stay right-aligned. */
+html.android .shell.mobile app-board-toolbar .tool.back {
+	margin-right: auto !important;
+}
+
+html.android .shell.mobile app-board-toolbar .back-separator {
+	display: none !important;
+}
+
+/* Notation panel */
+html.android app-notation-panel .tab {
+	padding: 0.8rem 1.15rem !important;
+	font-size: 0.97rem !important;
+}
+
+html.android app-move-tree .moves {
+	font-size: 1.125rem !important;
+}
+
+html.android app-engine-bar {
+	height: 3.25rem !important;
+	gap: 0.7rem !important;
+	font-size: 0.9rem !important;
+}
+
+html.android app-engine-bar .engine-switch {
+	width: 48px !important;
+	height: 28px !important;
+}
+
+html.android app-engine-bar .switch-knob {
+	width: 22px !important;
+	height: 22px !important;
+}
+
+html.android app-engine-bar .engine-switch.on .switch-knob {
+	transform: translate(22px, -50%) !important;
+}
+
+html.android app-engine-bar .engine-icon-btn {
+	width: 2.5rem !important;
+	height: 2.5rem !important;
+	border-color: var(--bg-border) !important;
+}
+
+html.android app-engine-bar .engine-icon-btn svg {
+	width: 1.25rem !important;
+	height: 1.25rem !important;
+}
+
+html.android app-engine-lines .pv {
+	padding: 0.4rem !important;
+	font-size: 0.95rem !important;
+}
+
+/* The handle between board and notation, wide enough for a finger. */
+html.android app-analysis-board .divider-handle {
+	width: 18px !important;
+	height: 3rem !important;
+}
+
+/* Phone: the board from edge to edge, the toolbar as icons so all five fit with Share in the corner. */
+@media (max-width: 599.98px) {
+	html.android .shell.mobile app-analysis-board .board-shell {
+		padding: 0.25rem 0 0.5rem !important;
+	}
+
+	html.android .shell.mobile app-analysis-board .board-controls {
+		padding: 0 8px !important;
+		box-sizing: border-box !important;
+	}
+
+	html.android .board-controls button {
+		min-height: 48px !important;
+	}
+
+	html.android .shell.mobile app-board-toolbar .tool {
+		width: 44px !important;
+		justify-content: center !important;
+		padding: 0 !important;
+	}
+
+	html.android .shell.mobile app-board-toolbar .tool .label {
+		display: none !important;
+	}
+}
+
+/* ------------------------------------------------------------------ the other pages: sizes for a finger */
+
+html.android :is(.collections-page, .collection-view, .search-page, .settings-page) :is(button.ghost, button.primary, label.ghost) {
+	min-height: 44px !important;
+}
+
+/* A label that opens a file picker (Import PGN): its text centred like a button's. */
+html.android label.ghost {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+}
+
+html.android :is(.mode-toggle, .color-toggle, .source-toggle, .colour-toggle, .result-picker) button {
+	min-height: 44px !important;
+}
+
+html.android :is(.search-page, .collections-page) input:not([type='checkbox']) {
+	min-height: 44px !important;
+}
+
+html.android .result-tab {
+	min-height: 46px !important;
+}
+
+html.android :is(table.results, table.entries) tbody td {
+	height: 44px !important;
+}
+
+/* Local Resources */
+html.android app-agent-page .tabs button {
+	min-height: 46px !important;
+}
+
+html.android app-agent-page .action {
+	min-height: 44px !important;
+	padding-left: 1rem !important;
+	padding-right: 1rem !important;
+}
+
+/* Settings */
+html.android .settings-page :is(.segment, .link-btn, .mini-btn, .danger-link, .ghost-btn, .primary-btn) {
+	min-height: 44px !important;
+}
+
+/* Sign in, Register, password pages */
+html.android .auth-page input {
+	min-height: 48px !important;
+}
+
+html.android .auth-page button.primary {
+	min-height: 52px !important;
+}
+
+html.android .auth-page .switch a {
+	display: inline-block;
+	padding: 0.65rem 0.25rem;
+}
+
+/* ------------------------------------------------------------------ Settings: the app's only footer */
+
+/* The links in one centred line at the very end of the page, with no empty space below. */
+html.android .settings-page {
+	padding-bottom: 0.75rem !important;
+}
+
+html.android .settings-footer {
+	justify-content: center !important;
+	text-align: center !important;
+	row-gap: 0.35rem !important;
+	padding-top: 0.85rem !important;
+}
+
+html.android .settings-footer a {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.35rem 0.1rem;
+}
+
+html.android .settings-footer .footer-link-icon {
+	width: 16px;
+	height: 16px;
+}
+
+/* ------------------------------------------------------------------ Home: the first screen */
+
+/* The welcome text and the four tiles, with room between them (.first-screen: tools/patches.mjs). */
+html.android .home-page .first-screen {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+html.android .home-page .hero-body {
+	margin-top: 0.75rem !important;
+}
+
+/* Tablet, either way up: the text and the four tiles fill the first screen exactly (upright one under the
+   other, sideways 2 x 2); the guide (The Pawn, The Knight...) starts just below, when scrolling. Upright,
+   the menu bar (56px) is above. */
+@media (min-width: 600px) {
+	html.android .home-page {
+		padding-top: 1.5rem !important;
+		gap: 1.5rem !important;
+	}
+
+	html.android .home-page .first-screen {
+		height: calc(100dvh - 56px - 3rem);
+		min-height: 30rem;
+	}
+
+	html.android .home-page .tiles {
+		flex: 1 1 auto;
+		min-height: 0;
+		grid-template-columns: minmax(0, 1fr) !important;
+		grid-template-rows: repeat(4, minmax(0, 1fr));
+		gap: 0.75rem !important;
+	}
+
+	html.android .home-page .tile {
+		justify-content: center !important;
+		overflow: hidden;
+	}
+}
+
+@media (min-width: 900px) {
+	html.android .home-page .first-screen {
+		height: calc(100dvh - 3rem);
+	}
+
+	html.android .home-page .tiles {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+		grid-template-rows: repeat(2, minmax(0, 1fr));
+		gap: 1rem !important;
+	}
+}
+
+/* ------------------------------------------------------------------ Search opponent: enlarged results */
+
+/* The button at the right end of the result tabs (opponent-search, tools/patches.mjs). */
+html.android .result-tabs .result-zoom {
+	flex: 0 0 auto;
+	align-self: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 40px;
+	margin: 0 0.25rem 0.25rem auto;
+	padding: 0;
+	border: 1px solid var(--bg-border);
+	border-radius: 10px;
+	background: var(--bg-elevated);
+	color: var(--accent-blue);
+	font-family: inherit;
+	font-size: 1.3rem;
+	line-height: 1;
+}
+
+html.android .result-tabs .result-zoom svg {
+	width: 22px;
+	height: 22px;
+}
+
+html.android .result-tabs .result-zoom.on {
+	background: var(--bg-active-move);
+	border-color: var(--accent-blue);
+}
+
+/* Enlarged: the page header (Database Search, Search opponent / Advanced search) and the search with the
+   player's profile give their room to the results. */
+html.android.search-zoomed .search-page > .page-header,
+html.android.search-zoomed app-opponent-search .search-section {
+	display: none !important;
+}
+
+/* ------------------------------------------------------------------ Game data / Save (game-file-dialog) */
+
+/* The dialog keeps its layout, a little larger for a finger, and grows with its content up to the screen's
+   height: everything, Type included, stays in view without scrolling. */
+html.android app-game-file-dialog .backdrop {
+	padding: 16px !important;
+}
+
+html.android app-game-file-dialog .dialog {
+	max-width: min(60rem, 100%) !important;
+	height: auto !important;
+	min-height: min(38rem, calc(100dvh - 32px)) !important;
+	max-height: calc(100dvh - 32px) !important;
+}
+
+html.android app-game-file-dialog .form {
+	gap: 0.85rem !important;
+	padding: 1.1rem 1.25rem !important;
+}
+
+html.android app-game-file-dialog .field-label {
+	font-size: 0.78rem !important;
+}
+
+html.android app-game-file-dialog :is(.field input, .field select, .tc-trigger) {
+	min-height: 42px !important;
+	font-size: 0.95rem !important;
+}
+
+html.android app-game-file-dialog .field.narrow {
+	flex-basis: 7.5rem !important;
+}
+
+html.android app-game-file-dialog .field.date {
+	flex-basis: 11rem !important;
+}
+
+html.android app-game-file-dialog .field.wide {
+	flex-basis: 12.5rem !important;
+}
+
+html.android app-game-file-dialog :is(.tab, .shelf-tab, .type-option, .icon-btn, .actions button) {
+	min-height: 44px !important;
+}
+
+/* Time control: the list opens upwards, where the form has room, and scrolls inside itself instead of
+   lengthening the form. */
+html.android app-game-file-dialog .tc-menu {
+	top: auto !important;
+	bottom: calc(100% + 4px) !important;
+	max-height: min(22rem, calc(50dvh - 4rem)) !important;
+	overscroll-behavior: contain;
+}
+
+html.android app-game-file-dialog .tc-option {
+	min-height: 40px !important;
+}

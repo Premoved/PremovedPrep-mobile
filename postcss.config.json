@@ -1,0 +1,5 @@
+{
+	"plugins": {
+		"./.build/tools/postcss-touch-hover.cjs": {}
+	}
+}

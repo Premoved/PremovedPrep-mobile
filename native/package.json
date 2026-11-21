@@ -1,0 +1,12 @@
+{
+	"name": "premoved-native",
+	"version": "0.1.0",
+	"private": true,
+	"description": "PremovedPrep's own Android plugin: the Stockfish process, the storage folder, files and system bits.",
+	"license": "AGPL-3.0-only",
+	"capacitor": {
+		"android": {
+			"src": "android"
+		}
+	}
+}

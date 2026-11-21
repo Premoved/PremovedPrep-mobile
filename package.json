@@ -1,0 +1,51 @@
+{
+	"name": "premovedprep-mobile",
+	"version": "0.9.0",
+	"private": true,
+	"author": {
+		"name": "Premoved",
+		"email": "contact@premoved.com"
+	},
+	"license": "AGPL-3.0-only",
+	"scripts": {
+		"prepare:web": "node tools/prepare.mjs",
+		"check:desktop": "node tools/prepare.mjs --check",
+		"build": "npm run prepare:web && ng build && node tools/licenses.mjs",
+		"build:dev": "npm run prepare:web && ng build --configuration development && node tools/licenses.mjs",
+		"engine": "node tools/fetch-engine.mjs",
+		"android:add": "cap add android && node tools/patch-android.mjs",
+		"android:patch": "node tools/patch-android.mjs",
+		"sync": "npm run build && cap sync android && node tools/patch-android.mjs",
+		"android": "npm run sync && cap run android",
+		"open": "cap open android"
+	},
+	"dependencies": {
+		"@capacitor/android": "^8.0.0",
+		"@capacitor/core": "^8.0.0",
+		"@noble/hashes": "^2.0.0",
+		"@sqlite.org/sqlite-wasm": "latest",
+		"buffer": "^6.0.3",
+		"chess.js": "^1.4.0",
+		"pako": "^2.1.0",
+		"premoved-native": "file:./native"
+	},
+	"devDependencies": {
+		"@angular/build": "^21.2.10",
+		"@angular/cli": "^21.2.10",
+		"@angular/common": "^21.2.0",
+		"@angular/compiler": "^21.2.0",
+		"@angular/compiler-cli": "^21.2.0",
+		"@angular/core": "^21.2.0",
+		"@angular/forms": "^21.2.0",
+		"@angular/platform-browser": "^21.2.0",
+		"@angular/router": "^21.2.0",
+		"@capacitor/cli": "^8.0.0",
+		"@lichess-org/chessground": "^10.1.1",
+		"@types/chess.js": "^0.13.7",
+		"@types/pako": "^2.0.3",
+		"esbuild": "^0.28.1",
+		"rxjs": "~7.8.0",
+		"tslib": "^2.3.0",
+		"typescript": "~5.9.2"
+	}
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "analytics": false
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "premoved-prep-mobile": {
+      "projectType": "application",
+      "schematics": {},
+      "root": "",
+      "sourceRoot": ".build/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": {
+              "base": "www",
+              "browser": ""
+            },
+            "browser": ".build/src/main.ts",
+            "index": ".build/src/index.html",
+            "tsConfig": "tsconfig.app.json",
+            "webWorkerTsConfig": "tsconfig.worker.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": ".build/public"
+              },
+              {
+                "glob": "LICENSE",
+                "input": "node_modules/@lichess-org/chessground",
+                "output": "licenses/chessground"
+              }
+            ],
+            "styles": [
+              "node_modules/@lichess-org/chessground/assets/chessground.base.css",
+              "node_modules/@lichess-org/chessground/assets/chessground.brown.css",
+              "node_modules/@lichess-org/chessground/assets/chessground.cburnett.css",
+              ".build/src/styles.css",
+              ".build/src/mobile/mobile.css"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "fileReplacements": [
+                {
+                  "replace": ".build/src/environments/environment.ts",
+                  "with": ".build/src/environments/environment.prod.ts"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1MB",
+                  "maximumError": "2MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "16kB",
+                  "maximumError": "32kB"
+                }
+              ],
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "fonts": true,
+                "styles": {
+                  "minify": true,
+                  "removeSpecialComments": true,
+                  "inlineCritical": false
+                }
+              }
+            },
+            "development": {
+              "fileReplacements": [
+                {
+                  "replace": ".build/src/environments/environment.ts",
+                  "with": ".build/src/environments/environment.prod.ts"
+                }
+              ],
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        }
+      }
+    }
+  }
+}

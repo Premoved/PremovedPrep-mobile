@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PremovedPrep</string>
+    <string name="title_activity_main">PremovedPrep</string>
+    <string name="package_name">com.premoved.premovedprep</string>
+    <string name="custom_url_scheme">com.premoved.premovedprep</string>
+</resources>

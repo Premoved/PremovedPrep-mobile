@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./.build/src",
+    "outDir": "./out-tsc/app",
+    "types": []
+  },
+  "include": [
+    ".build/src/**/*.ts"
+  ],
+  "exclude": [
+    ".build/src/**/*.spec.ts",
+    ".build/src/**/*.worker.ts"
+  ]
+}

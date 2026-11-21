@@ -1,0 +1,273 @@
+// Small edits to the desktop app's sources, applied to the copy in .build/src by tools/prepare.mjs.
+//
+// Each edit must find its text exactly once. When the desktop app changes that text, the build stops
+// and names the edit, so a difference made on purpose for Android is never lost silently on a sync.
+// Whole files that differ on Android live in src/ instead (same paths as in the desktop app).
+// Styles that differ on Android are in src/mobile/mobile.css, keyed on html.android.
+
+export const PATCHES = [
+	{
+		file: "src/app/core/services/desktop-app.service.ts",
+		why: "Android: the app has versions of its own (0.9 while the desktop is at 0.14), so it asks the server's Android release; the player list in it is the same.",
+		find: "return this.http.get<AppRelease>(`${this.baseUrl}/release`, {",
+		replace: "return this.http.get<AppRelease>(`${this.baseUrl}/release${window.premovedDesktop?.platform === 'android' ? '/android' : ''}`, {",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Android: a database lives inside the app, there is no folder to show it in.",
+		find: "title=\"Show in folder\" (click)=\"showDatabase(database)\"",
+		replace: "disabled",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Android: a database lives inside the app, there is no folder to show it in.",
+		find: "title=\"Show in folder\" (click)=\"showPositions(positions)\"",
+		replace: "disabled",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Android: the engines ship with the app (Stockfish, Lc0); none can be added, and with one page open there are no background tabs.",
+		find: "\t\t\t\t<div class=\"row-actions\">\n\t\t\t\t\t<button type=\"button\" class=\"action\" [disabled]=\"busy() !== null\" (click)=\"addEngine()\">Add an engine</button>\n\n\t\t\t\t\t<label class=\"option\">\n\t\t\t\t\t\t<input type=\"checkbox\" [checked]=\"concurrent()\" (change)=\"onConcurrent($event)\" />\n\t\t\t\t\t\tKeep engines running in background tabs\n\t\t\t\t\t</label>\n\t\t\t\t</div>\n",
+		replace: "\t\t\t\t<p class=\"empty\">These engines ship with the app. The default one starts on the Analysis Board.</p>\n",
+	},
+	{
+		file: "src/app/app.config.ts",
+		why: "Android: one page at a time, so no tabs are kept or restored.",
+		find: "inject(TabsStore).init(desktop.isDesktop());",
+		replace: "inject(TabsStore).init(desktop.isDesktop() && window.premovedDesktop?.platform !== 'android');",
+	},
+	{
+		file: "src/app/core/tabs/tabs.store.ts",
+		why: "Android: \"open in a new tab\" opens the page in place; there is no tab bar and no browser.",
+		find: "\topenElsewhere(url: string): void {\n\t\tif (this.desktop) {",
+		replace: "\topenElsewhere(url: string): void {\n\t\tif (window.premovedDesktop?.platform === 'android') {\n\t\t\tvoid this.router.navigateByUrl(url);\n\t\t\treturn;\n\t\t}\n\t\tif (this.desktop) {",
+	},
+	{
+		file: "src/app/features/analysis-board/chess-board/board-layout.service.ts",
+		why: "Android: a tablet has room for a board larger than the desktop cap.",
+		find: "const MAX_BOARD_WIDTH = 640;",
+		replace: "const MAX_BOARD_WIDTH = window.premovedDesktop?.platform === 'android' ? 1600 : 640;",
+	},
+	{
+		file: "src/app/features/analysis-board/chess-board/board-layout.service.ts",
+		why: "Android: a shorter header and toolbar; on a tablet held upright the notation stays under the board, so its room is kept too.",
+		find: "const MOBILE_CHROME_REM = 8.25;\n",
+		replace: "const MOBILE_CHROME_REM = 8.25;\n// Android: header and toolbar take 7rem; the notation follows below the board, and the page scrolls to it\n// (a phone, and a tablet held upright), so the board is as large as the screen allows.\nconst chromeRem = (): number => (window.premovedDesktop?.platform === 'android' ? 7 : MOBILE_CHROME_REM);\n",
+	},
+	{
+		file: "src/app/features/analysis-board/chess-board/board-layout.service.ts",
+		why: "Android: see chromeRem.",
+		find: "const chrome = MOBILE_CHROME_REM * px(",
+		replace: "const chrome = chromeRem() * px(",
+	},
+	{
+		file: "src/app/features/home/home.component.html",
+		why: "Android: this is the mobile application.",
+		find: "The PremovedPrep Desktop application",
+		replace: "The PremovedPrep Mobile application",
+	},
+	{
+		file: "src/app/features/home/home.component.html",
+		why: "Android: two engines ship with the app and none can be added.",
+		find: "The application ships with <strong>Stockfish 19</strong>, running natively on your computer. You can add\n\t\t\t\t\t\t\tyour own UCI engines from Local Resources.",
+		replace: "The application ships with <strong>Stockfish 19</strong> and <strong>Leela Chess Zero</strong>, running\n\t\t\t\t\t\t\tnatively on your device. You can choose the default one from Local Resources.",
+	},
+	{
+		file: "src/app/features/home/home.component.html",
+		why: "Android: databases are indexed by the desktop application and imported here.",
+		find: "You can index your local <strong>PGN databases</strong>, enabling you to use any of them while using the\n\t\t\t\t\t\t\tapplication.",
+		replace: "You can import <strong>PGN databases</strong> indexed with the desktop application (.ppdb files), enabling\n\t\t\t\t\t\t\tyou to use any of them while using the application.",
+	},
+	{
+		file: "src/app/features/search/opponent-search/opponent-search.component.html",
+		why: "Android: a button at the right of the result tabs enlarges the results (Games list, Player's Opening Tree, Advanced report): the page header and the search above them are hidden until it is pressed again.",
+		find: "\t\t\t\t\t</button>\n\t\t\t\t}\n\t\t\t</div>\n\n\t\t\t<div class=\"result-body\" [hidden]=\"panel() !== 'games'\">",
+		replace: "\t\t\t\t\t</button>\n\t\t\t\t}\n\t\t\t\t<button\n\t\t\t\t\ttype=\"button\"\n\t\t\t\t\tclass=\"result-zoom\"\n\t\t\t\t\t[class.on]=\"zoomed()\"\n\t\t\t\t\t[attr.aria-pressed]=\"zoomed()\"\n\t\t\t\t\t[attr.aria-label]=\"zoomed() ? 'Minimize' : 'Maximize'\"\n\t\t\t\t\t(click)=\"toggleZoom()\"\n\t\t\t\t>\n\t\t\t\t\t@if (zoomed()) {\n\t\t\t\t\t\t<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><!-- Boxicons v3.0.8 https://boxicons.com --><path d=\"M4.71 3.29 3.29 4.71l3 3L4 10h6V4L7.71 6.29zm11.58 3L14 4v6h6l-2.29-2.29 3-3-1.42-1.42zM20 14h-6v6l2.29-2.29 3 3 1.42-1.42-3-3zM6.29 16.29l-3 3 1.42 1.42 3-3L10 20v-6H4z\"></path></svg>\n\t\t\t\t\t} @else {\n\t\t\t\t\t\t<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><!-- Boxicons v3.0.8 https://boxicons.com --><path d=\"m15.71 14.29-1.42 1.42 3 3L15 21h6v-6l-2.29 2.29zM8.29 9.71l1.42-1.42-3-3L9 3H3v6l2.29-2.29zm9-4.42-3 3 1.42 1.42 3-3L21 9V3h-6zM6.71 18.71l3-3-1.42-1.42-3 3L3 15v6h6z\"></path></svg>\n\t\t\t\t\t}\n\t\t\t\t</button>\n\t\t\t</div>\n\n\t\t\t<div class=\"result-body\" [hidden]=\"panel() !== 'games'\">",
+	},
+	{
+		file: "src/app/features/search/opponent-search/opponent-search.component.ts",
+		why: "Android: see the zoom button.",
+		find: "\tComponent,\n\tElementRef,\n",
+		replace: "\tComponent,\n\tDestroyRef,\n\tElementRef,\n",
+	},
+	{
+		file: "src/app/features/search/opponent-search/opponent-search.component.ts",
+		why: "Android: see the zoom button.",
+		find: "export class OpponentSearchComponent {\n",
+		replace: "export class OpponentSearchComponent {\n\t// Android: the results over the whole page. The page header belongs to the parent page, so the state is a\n\t// class on <html> (mobile.css), taken off again when the page closes.\n\treadonly zoomed = signal(false);\n\treadonly unzoomOnLeave = inject(DestroyRef).onDestroy(() =>\n\t\tdocument.documentElement.classList.remove('search-zoomed'),\n\t);\n\n\ttoggleZoom(): void {\n\t\tthis.zoomed.update((on) => !on);\n\t\tdocument.documentElement.classList.toggle('search-zoomed', this.zoomed());\n\t}\n\n",
+	},
+	{
+		file: "src/app/features/analysis-board/board-toolbar/board-toolbar.component.html",
+		why: "Android: one page at a time, so a Back button returns to the collection or search a game was opened from (not shown on a clean board). Top left; on a phone at the left of the toolbar.",
+		find: "@if (summary(); as game) {\n\t<div class=\"game-info\">",
+		replace: "@if (backTo()) {\n\t<button type=\"button\" class=\"tool back\" (click)=\"goBack()\" aria-label=\"Back\">\n\t\t<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><!-- Boxicons v3.0.8 https://boxicons.com --><path d=\"M9.16 12.25 6.63 10H15c2.21 0 4 1.79 4 4v6h2v-6c0-3.31-2.69-6-6-6H6.63l2.53-2.25-1.33-1.49-5.34 4.75 5.34 4.75 1.33-1.49Z\"></path></svg>\n\t\t<span class=\"label\">Back</span>\n\t</button>\n\t<span class=\"toolbar-separator back-separator\"></span>\n}\n@if (summary(); as game) {\n\t<div class=\"game-info\">",
+	},
+	{
+		file: "src/app/features/analysis-board/board-toolbar/board-toolbar.component.ts",
+		why: "Android: see the Back button.",
+		find: "import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';\n",
+		replace: "import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';\nimport { Router } from '@angular/router';\n\n// Android: where Back on the Analysis Board leads (see BoardToolbarComponent.backTo).\nconst BACK_ORIGIN = /^\\/(library|repertoire|search)(\\/|\\?|$)/;\n// A game opened on the board: from a collection (item, local) or a database (game).\nconst OPENED_GAME = /^\\/analysis\\?(?:.*&)?(?:game|item|local)=/;\nlet backOrigin: string | null = null;\n",
+	},
+	{
+		file: "src/app/features/analysis-board/board-toolbar/board-toolbar.component.ts",
+		why: "Android: see the Back button.",
+		find: "export class BoardToolbarComponent {\n",
+		replace: "export class BoardToolbarComponent {\n\t// Android: there are no tabs, so Back returns to the collection or the search the board was opened from.\n\t// Moving to another game of the same collection (Previous, Next) keeps that way back.\n\tprivate readonly router = inject(Router);\n\treadonly backTo = computed(() => {\n\t\tif (window.premovedDesktop?.platform !== 'android') {\n\t\t\treturn null;\n\t\t}\n\t\tconst navigation = this.router.lastSuccessfulNavigation();\n\t\tconst here = navigation?.finalUrl;\n\t\t// Only a game opened from somewhere has a way back; a clean board (the menu, Home, New board) has none.\n\t\tif (!here || !OPENED_GAME.test(this.router.serializeUrl(here))) {\n\t\t\tbackOrigin = null;\n\t\t\treturn null;\n\t\t}\n\t\tconst from = navigation?.previousNavigation?.finalUrl;\n\t\tconst url = from ? this.router.serializeUrl(from) : null;\n\t\tif (url !== null && BACK_ORIGIN.test(url)) {\n\t\t\tbackOrigin = url;\n\t\t} else if (url === null || !url.startsWith('/analysis')) {\n\t\t\tbackOrigin = null;\n\t\t}\n\t\treturn backOrigin;\n\t});\n\n\tgoBack(): void {\n\t\tconst to = this.backTo();\n\t\tif (to !== null) {\n\t\t\tvoid this.router.navigateByUrl(to);\n\t\t}\n\t}\n\n",
+	},
+	{
+		file: "src/app/features/home/home.component.html",
+		why: "Android: without this line the four section tiles fit on the first screen.",
+		find: "\t\t\t<p>An <b>all in one tournament preparation tool for chess players</b>.</p>\n",
+		replace: "",
+	},
+	{
+		file: "src/app/features/collections/collections-page.component.html",
+		why: "Android: the long-press menu of a cloud collection also copies it to this device (the small badge on the card is hard to hit).",
+		find: "\t\t<button type=\"button\" class=\"danger\" (click)=\"remove()\">Delete from cloud</button>\n",
+		replace: "\t\t@if (bridge.embedded() && !hasLocalTwin(ctx.collection.id)) {\n\t\t\t<button type=\"button\" [disabled]=\"syncing() !== null\" (click)=\"closeMenu(); pullToLocal(ctx.collection)\">Copy to this device</button>\n\t\t}\n\t\t<button type=\"button\" class=\"danger\" (click)=\"remove()\">Delete from cloud</button>\n",
+	},
+	{
+		file: "src/app/features/collections/collections-page.component.html",
+		why: "Android: the long-press menu of a collection on this device also copies it to the cloud.",
+		find: "\t\t<button type=\"button\" (click)=\"copyLocal(ctx.collection)\">Copy</button>\n",
+		replace: "\t\t<button type=\"button\" (click)=\"copyLocal(ctx.collection)\">Copy</button>\n\t\t@if (ctx.collection.cloudId === null && auth.isLoggedIn()) {\n\t\t\t<button type=\"button\" [disabled]=\"syncing() !== null\" (click)=\"closeMenu(); pushToCloud(ctx.collection)\">Copy to the cloud</button>\n\t\t}\n",
+	},
+	{
+		file: "src/app/features/collections/collections-page.component.ts",
+		why: "Android: room for the added menu entry.",
+		find: "const MENU_FOOTPRINT = { width: 208, height: 132 };",
+		replace: "const MENU_FOOTPRINT = { width: 208, height: 176 };",
+	},
+	{
+		file: "src/app/features/collections/collections-page.component.ts",
+		why: "Android: room for the added menu entry.",
+		find: "const LOCAL_MENU_FOOTPRINT = { width: 208, height: 176 };",
+		replace: "const LOCAL_MENU_FOOTPRINT = { width: 208, height: 220 };",
+	},
+	{
+		file: "src/app/core/sync/collection-mirror.service.ts",
+		why: "Android: copying a cloud collection to the device gives each game without a uid its tag in the cloud, eight requests at a time instead of one after another (a 100-game collection took half a minute).",
+		find: "\tprivate async pull(pair: MirrorPair, items: readonly ItemDetail[]): Promise<string> {\n\t\tconst entries: Entry[] = [];\n\t\tfor (const item of items) {\n\t\t\tlet pgn = item.pgn;\n\t\t\tif (tagOf(pgn, UID_TAG) === null) {\n\t\t\t\tpgn = setTags(pgn, { [UID_TAG]: newUid() });\n\t\t\t\tawait firstValueFrom(this.api.updateItem(item.id, pgn, item.itemType));\n\t\t\t}\n\t\t\tentries.push({ uid: tagOf(pgn, UID_TAG), type: item.itemType, pgn });\n\t\t}\n",
+		replace: "\tprivate async pull(pair: MirrorPair, items: readonly ItemDetail[]): Promise<string> {\n\t\tconst stamped: string[] = [];\n\t\tfor (let start = 0; start < items.length; start += 8) {\n\t\t\tconst batch = items.slice(start, start + 8);\n\t\t\tstamped.push(\n\t\t\t\t...(await Promise.all(\n\t\t\t\t\tbatch.map(async (item) => {\n\t\t\t\t\t\tif (tagOf(item.pgn, UID_TAG) !== null) {\n\t\t\t\t\t\t\treturn item.pgn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tconst pgn = setTags(item.pgn, { [UID_TAG]: newUid() });\n\t\t\t\t\t\tawait firstValueFrom(this.api.updateItem(item.id, pgn, item.itemType));\n\t\t\t\t\t\treturn pgn;\n\t\t\t\t\t}),\n\t\t\t\t)),\n\t\t\t);\n\t\t}\n\t\tconst entries: Entry[] = items.map((item, index) => ({\n\t\t\tuid: tagOf(stamped[index], UID_TAG),\n\t\t\ttype: item.itemType,\n\t\t\tpgn: stamped[index],\n\t\t}));\n",
+	},
+	{
+		file: "src/app/core/browser/long-press-tooltip.service.ts",
+		why: "Android: every button without visible text gets its label on a long press, links too (Account, Preferences in the rail).",
+		find: "closest<HTMLElement>('button, [role=\"button\"]')",
+		replace: "closest<HTMLElement>('button, [role=\"button\"], a[href]')",
+	},
+	{
+		file: "src/app/core/browser/long-press-tooltip.service.ts",
+		why: "Android: a button labelled only by text the layout hides (Sign out, Preferences in the rail) shows that text.",
+		find: "const text = (button.getAttribute('title') ?? button.getAttribute('aria-label') ?? '').trim();",
+		replace: "const text = (button.getAttribute('title') ?? button.getAttribute('aria-label') ?? button.textContent ?? '').trim();",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.html",
+		why: "Android: a shorter tooltip for the theme button.",
+		find: "[attr.aria-label]=\"theme.scheme() === 'dark' ? 'Switch to a light theme' : 'Switch to a dark theme'\"",
+		replace: "aria-label=\"Toggle theme\"",
+	},
+	{
+		file: "src/app/features/analysis-board/analysis-board.component.ts",
+		why: "Android: the board pane narrows until the tools move under the board, and no further (there the board and its tools still fit without scrolling).",
+		find: "\tprivate notationWidthAt(clientX: number, rect: DOMRect): number {\n\t\treturn this.clampNotation(rect.right - clientX - this.dividerWidth() / 2, rect.width);\n\t}\n",
+		replace: "\tprivate notationWidthAt(clientX: number, rect: DOMRect): number {\n\t\tconst width = this.clampNotation(rect.right - clientX - this.dividerWidth() / 2, rect.width);\n\t\t// Android: once the tools have moved under the board, the board pane narrows no further.\n\t\tconst current = this.notationWidth();\n\t\tif (\n\t\t\twindow.premovedDesktop?.platform === 'android' &&\n\t\t\tcurrent !== null &&\n\t\t\twidth > current &&\n\t\t\tthis.boardPaneRef?.nativeElement.querySelector('.board-shell.narrow-layout')\n\t\t) {\n\t\t\treturn current;\n\t\t}\n\t\treturn width;\n\t}\n",
+	},
+	{
+		file: "src/app/shared/logo/royal-logo.component.ts",
+		why: "Android: each logo has its own mask. The ids are global, and the first logo on the page sits in the hidden tab bar: a mask inside something hidden is not drawn, so the gap between queen and king disappeared.",
+		find: "<mask id=\"royal-queen-cutout\" maskUnits=\"userSpaceOnUse\"",
+		replace: "<mask [attr.id]=\"maskId\" maskUnits=\"userSpaceOnUse\"",
+	},
+	{
+		file: "src/app/shared/logo/royal-logo.component.ts",
+		why: "Android: see the mask above.",
+		find: "<g mask=\"url(#royal-queen-cutout)\">",
+		replace: "<g [attr.mask]=\"'url(#' + maskId + ')'\">",
+	},
+	{
+		file: "src/app/shared/logo/royal-logo.component.ts",
+		why: "Android: see the mask above.",
+		find: "export class RoyalLogoComponent {}",
+		replace: "export class RoyalLogoComponent {\n\tprivate static count = 0;\n\treadonly maskId = `royal-queen-cutout-${++RoyalLogoComponent.count}`;\n}",
+	},
+	{
+		file: "src/app/features/home/home.component.html",
+		why: "Android: the welcome text and the four tiles share the first screen (mobile.css); the guide comes when scrolling.",
+		find: "<div class=\"home-page\">\n\t<header class=\"hero\">",
+		replace: "<div class=\"home-page\">\n\t<div class=\"first-screen\">\n\t<header class=\"hero\">",
+	},
+	{
+		file: "src/app/features/home/home.component.html",
+		why: "Android: see the first screen above.",
+		find: "\t</nav>\n\n\t<section class=\"guide\"",
+		replace: "\t</nav>\n\t</div>\n\n\t<section class=\"guide\"",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.html",
+		why: "Android: no tabs, so a long press on a menu entry opens that section clean (a new, empty board for the Analysis Board).",
+		find: "\t\t<button type=\"button\" role=\"menuitem\" class=\"nav-context-menu-item\" (click)=\"openNavInNewTab()\">\n\t\t\t<span class=\"icon\" aria-hidden=\"true\">&#8599;</span> Open in new tab\n\t\t</button>\n",
+		replace: "\t\t<button type=\"button\" role=\"menuitem\" class=\"nav-context-menu-item\" (click)=\"openNavClean()\">\n\t\t\t<span class=\"icon\" aria-hidden=\"true\">&#8599;</span> {{ navMenuLabel(menu.path) }}\n\t\t</button>\n",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.ts",
+		why: "Android: see the menu entry above.",
+		find: "\topenNavInNewTab(): void {\n",
+		replace: "\t// Android: what a long press on a menu entry offers, and where it leads.\n\tnavMenuLabel(path: string): string {\n\t\tswitch (path) {\n\t\t\tcase '/analysis':\n\t\t\t\treturn 'Open new analysis board';\n\t\t\tcase '/search':\n\t\t\t\treturn 'Database Search';\n\t\t\tcase '/library':\n\t\t\t\treturn 'Library';\n\t\t\tcase '/repertoire':\n\t\t\t\treturn 'Repertoire';\n\t\t\tdefault:\n\t\t\t\treturn 'Local Resources';\n\t\t}\n\t}\n\n\topenNavClean(): void {\n\t\tconst menu = this.navContextMenu();\n\t\tthis.closeNavContextMenu();\n\t\tif (!menu) {\n\t\t\treturn;\n\t\t}\n\t\t// The board reads ?fresh and starts empty (asking first if the current one has unsaved work).\n\t\tvoid this.router.navigateByUrl(menu.path === '/analysis' ? '/analysis?fresh=1' : menu.path);\n\t}\n\n\topenNavInNewTab(): void {\n",
+	},
+	{
+		file: "src/app/features/analysis-board/analysis-board.component.ts",
+		why: "Android: ?fresh starts an empty board (the menu's Open new analysis board): there are no tabs to open one in.",
+		find: "\treadonly line = input<string | undefined>(undefined);\n",
+		replace: "\treadonly line = input<string | undefined>(undefined);\n\n\t// Android: /analysis?fresh=1, a new empty board in place of this one.\n\treadonly fresh = input<string | undefined>(undefined);\n",
+	},
+	{
+		file: "src/app/features/analysis-board/analysis-board.component.ts",
+		why: "Android: see ?fresh.",
+		find: "\t\t// A board opened with nothing in the URL is this tab's own analysis, from where it left off.\n",
+		replace: "\t\t// Android: ?fresh. The board's own work (its draft) is shown first, so asking to discard or save it\n\t\t// is about what the user sees; then the board starts empty and the URL forgets the game it showed.\n\t\teffect(() => {\n\t\t\tconst board = this.board();\n\t\t\tif (!board || !this.fresh()) {\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tuntracked(() => {\n\t\t\t\tif (!this.draftRestored && !this.game() && !this.item() && !this.local()) {\n\t\t\t\t\tthis.draftRestored = true;\n\t\t\t\t\tthis.restoreDraft(board, null);\n\t\t\t\t}\n\t\t\t\tvoid this.confirmDiscardOrSave().then((proceed) => {\n\t\t\t\t\tif (proceed) {\n\t\t\t\t\t\tthis.drafts.clear(this.tabSlot);\n\t\t\t\t\t\tthis.tree.reset(DEFAULT_FEN);\n\t\t\t\t\t\tthis.tree.markSaved();\n\t\t\t\t\t\tboard.refresh();\n\t\t\t\t\t}\n\t\t\t\t\tvoid this.router.navigate([], {\n\t\t\t\t\t\tqueryParams: proceed\n\t\t\t\t\t\t\t? { fresh: null, game: null, db: null, item: null, local: null, ply: null, line: null }\n\t\t\t\t\t\t\t: { fresh: null },\n\t\t\t\t\t\tqueryParamsHandling: 'merge',\n\t\t\t\t\t\treplaceUrl: true,\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t});\n\t\t});\n\n\t\t// A board opened with nothing in the URL is this tab's own analysis, from where it left off.\n",
+	},
+	{
+		file: "src/app/features/settings/settings-page.component.html",
+		why: "Android: this build is published as PremovedPrep-mobile, under its own licence file.",
+		find: "<a href=\"https://github.com/Premoved/PremovedPrep-App/blob/main/LICENSE\" target=\"_blank\" rel=\"noopener\"",
+		replace: "<a href=\"https://github.com/Premoved/PremovedPrep-mobile/blob/main/LICENSE\" target=\"_blank\" rel=\"noopener\"",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.ts",
+		why: "Android, tablet: the menu starts closed (the rail); opened, it lies over the page and closes on the next navigation.",
+		find: "\treadonly collapsed = signal(false);\n",
+		replace: "\treadonly collapsed = signal(window.premovedDesktop?.platform === 'android');\n",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.ts",
+		why: "Android, tablet: see the menu above.",
+		find: "\t\t\tif (event instanceof NavigationStart || event instanceof NavigationEnd) {\n\t\t\t\tthis.drawerOpen.set(false);\n",
+		replace: "\t\t\tif (event instanceof NavigationStart || event instanceof NavigationEnd) {\n\t\t\t\tthis.drawerOpen.set(false);\n\t\t\t\tif (window.premovedDesktop?.platform === 'android') {\n\t\t\t\t\tthis.collapsed.set(true);\n\t\t\t\t}\n",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.ts",
+		why: "Android, tablet: see the menu above.",
+		find: "\treadonly drawerVisible = computed(() => this.viewport.isMobile() && this.drawerOpen());\n",
+		replace: "\treadonly drawerVisible = computed(() => this.viewport.isMobile() && this.drawerOpen());\n\n\t// Android, tablet: the menu open over the page, closed again by a tap beside it.\n\treadonly railOpen = computed(\n\t\t() => window.premovedDesktop?.platform === 'android' && !this.viewport.isMobile() && !this.collapsed(),\n\t);\n",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.html",
+		why: "Android, tablet: see the menu above.",
+		find: "@if (drawerVisible()) {\n",
+		replace: "@if (railOpen()) {\n\t<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- Backdrop. -->\n\t<div class=\"rail-backdrop\" (click)=\"collapsed.set(true)\"></div>\n}\n\n@if (drawerVisible()) {\n",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.html",
+		why: "Android, tablet: a tap on the logo opens the menu over the page; with the menu open, it goes Home.",
+		find: "\t\t<a class=\"brand\" routerLink=\"/home\">\n",
+		replace: "\t\t<a class=\"brand\" [routerLink]=\"railClosed() ? null : '/home'\" (click)=\"openRailFromLogo()\">\n",
+	},
+	{
+		file: "src/app/layout/main-layout/main-layout.component.ts",
+		why: "Android, tablet: see the logo above.",
+		find: "\ttoggleSidebar(): void {\n",
+		replace: "\t// Android, tablet: the menu is closed (the rail); a tap on the logo opens it rather than going Home.\n\treadonly railClosed = computed(\n\t\t() => window.premovedDesktop?.platform === 'android' && !this.viewport.isMobile() && this.collapsed(),\n\t);\n\n\topenRailFromLogo(): void {\n\t\tif (this.railClosed()) {\n\t\t\tthis.collapsed.set(false);\n\t\t}\n\t}\n\n\ttoggleSidebar(): void {\n",
+	},
+];
