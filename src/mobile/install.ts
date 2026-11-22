@@ -18,10 +18,86 @@ import { MOBILE_VERSION } from './version';
 // As on the desktop: only a web address or mailto is handed to the system; anything else is dropped.
 const HANDS_OVER = /^(https?:\/\/|mailto:)/i;
 
+// The Analysis Board left with unsaved work, so the app opens on it again. The work itself is the board's
+// draft (analysis-draft.store.ts), kept in the one slot the app has (tools/patches.mjs).
+const RESUME_KEY = 'premovedprep.mobile.resume';
+const DRAFTS_KEY = 'premovedprep.drafts';
+const DRAFT_SLOT = 'mobile';
+
+function hasDraft(): boolean {
+	try {
+		const all: unknown = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? 'null');
+		return typeof all === 'object' && all !== null && DRAFT_SLOT in all;
+	} catch {
+		return false;
+	}
+}
+
+// Before the router starts: an app opened at its start page goes to the board it was left on.
+function resumeBoard(): void {
+	try {
+		const resume = localStorage.getItem(RESUME_KEY);
+		if (!resume || !hasDraft() || !(location.pathname === '/' || location.pathname === '/home')) {
+			return;
+		}
+		history.replaceState(history.state, '', resume);
+	} catch {
+		// Storage unavailable: the app opens as usual.
+	}
+}
+
+// Documents/PremovedPrep left by an earlier installation (uninstalling keeps it): this one cannot open the
+// files in it until Documents is picked once. Asked once; Local Resources → Location can do it later.
+const FOLDER_ASKED_KEY = 'premovedprep.mobile.left-folder-asked';
+
+async function askForLeftFolder(store: LocalStore): Promise<void> {
+	try {
+		const state = await Native.folderState();
+		if (!state.isDefault || !state.inherited || localStorage.getItem(FOLDER_ASKED_KEY)) {
+			return;
+		}
+		localStorage.setItem(FOLDER_ASKED_KEY, '1');
+		const { ok } = await Native.confirm({
+			title: 'PremovedPrep folder',
+			message:
+				'The PremovedPrep folder in Documents is from an earlier installation of the app. Choose the Documents folder once, so the app can open the files in it.',
+			ok: 'Choose',
+			cancel: 'Later',
+		});
+		if (!ok) {
+			return;
+		}
+		const picked = await Native.folderPick();
+		if (picked.picked) {
+			store.forgetFolder();
+			await store.ensure();
+		}
+	} catch {
+		// Nothing asked: the folder can still be picked in Local Resources.
+	}
+}
+
+// When the app goes to the background: remember the board if the user is on it; anywhere else, nothing.
+function rememberBoard(): void {
+	try {
+		if (!location.pathname.startsWith('/analysis')) {
+			localStorage.removeItem(RESUME_KEY);
+			return;
+		}
+		const here = new URL(location.href);
+		// ?fresh asks for an empty board: reopening with it would set the work aside.
+		here.searchParams.delete('fresh');
+		localStorage.setItem(RESUME_KEY, here.pathname + here.search);
+	} catch {
+		// Storage unavailable: nothing to remember.
+	}
+}
+
 function install(): void {
 	// mobile.css keys every Android-only rule on this class, so the same styles stay inert in a browser.
 	document.documentElement.classList.add('android');
 	guardLongPress();
+	resumeBoard();
 
 	const settings = new Settings();
 	const store = new LocalStore(files, () => Native.folderState());
@@ -55,6 +131,8 @@ function install(): void {
 		console.error('The bundled engine could not be read', error);
 		return null;
 	});
+	// First: whether Documents/PremovedPrep was already there is read before anything is written in it.
+	void askForLeftFolder(store);
 	void store.ensure().catch(() => undefined);
 
 	const answerers = new Map<string, () => unknown>();
@@ -65,6 +143,7 @@ function install(): void {
 		if (document.visibilityState !== 'hidden') {
 			return;
 		}
+		rememberBoard();
 		const answer = answerers.get('unsaved');
 		if (answer) {
 			void Promise.resolve()

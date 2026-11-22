@@ -9,11 +9,16 @@
 //                                              official release, which carries the network inside the
 //                                              binary.
 //
+// First choice: the same engines built with 16 KB page alignment, which run on devices with 4 KB and with
+// 16 KB pages (.github/workflows/engines.yml publishes them in this repository's release
+// engines-<Stockfish tag>-lc0-<Lc0 tag>). Until that release exists, the official builds above, which
+// run only on 4 KB devices; PREMOVEDPREP_ENGINES_FROM=official takes those in any case.
+//
 // The binaries are GPL-3.0 and stay out of the repository, as on the desktop.
 // PREMOVEDPREP_ENGINES=stockfish fetches Stockfish alone.
 
 import { execFileSync } from 'node:child_process';
-import { createWriteStream, existsSync, readFileSync } from 'node:fs';
+import { createWriteStream, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { copyFile, mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -29,6 +34,7 @@ const DESKTOP = process.env.PREMOVEDPREP_DESKTOP
 const STOCKFISH = 'official-stockfish/Stockfish';
 const LC0 = 'LeelaChessZero/lc0';
 const LC0_TAG = 'v0.32.1';
+const OWN = 'Premoved/PremovedPrep-mobile';
 const INTO = path.join(ROOT, 'native', 'android', 'src', 'main', 'jniLibs', 'arm64-v8a');
 const WANTED = (process.env.PREMOVEDPREP_ENGINES ?? 'stockfish,lc0').split(',').map((name) => name.trim());
 
@@ -47,9 +53,59 @@ function desktopTag() {
 await rm(INTO, { recursive: true, force: true });
 await mkdir(INTO, { recursive: true });
 
-await stockfish();
-if (WANTED.includes('lc0')) {
-	await lc0();
+if (!(await ownBuilds())) {
+	await stockfish();
+	if (WANTED.includes('lc0')) {
+		await lc0();
+	}
+}
+checkPages();
+
+// The 16 KB builds of this repository's Engines workflow, if they are published for these versions.
+async function ownBuilds() {
+	if (process.env.PREMOVEDPREP_ENGINES_FROM === 'official') {
+		return false;
+	}
+	const tag = `engines-${desktopTag()}-lc0-${LC0_TAG}`;
+	const release = await pick(OWN, tag, true);
+	const assets = release?.assets ?? [];
+	const wanted = ['libstockfish.so', 'libstockfish_dotprod.so', ...(WANTED.includes('lc0') ? ['liblc0.so'] : [])];
+	const found = wanted.map((name) => assets.find((asset) => asset.name === name));
+	if (!release || found.some((asset) => !asset)) {
+		console.warn(`No 16 KB engine builds yet (release ${tag} of ${OWN}): taking the official builds.`);
+		return false;
+	}
+	for (const asset of found) {
+		console.log(`Downloading ${asset.name} (${tag})...`);
+		await download(asset.browser_download_url, path.join(INTO, asset.name));
+		console.log(`  -> ${path.relative(ROOT, path.join(INTO, asset.name))}`);
+	}
+	return true;
+}
+
+// Whether each binary also runs on a device with 16 KB memory pages: every loaded segment must allow it.
+function checkPages() {
+	const PAGE = 16 * 1024;
+	for (const name of readdirSync(INTO)) {
+		const data = readFileSync(path.join(INTO, name));
+		const phoff = Number(data.readBigUInt64LE(0x20));
+		const size = data.readUInt16LE(0x36);
+		const count = data.readUInt16LE(0x38);
+		let fits = true;
+		for (let i = 0; i < count; i++) {
+			const at = phoff + i * size;
+			if (data.readUInt32LE(at) !== 1) {
+				continue;
+			}
+			const offset = data.readBigUInt64LE(at + 8);
+			const vaddr = data.readBigUInt64LE(at + 16);
+			const align = data.readBigUInt64LE(at + 48);
+			if (align < BigInt(PAGE) || offset % BigInt(PAGE) !== vaddr % BigInt(PAGE)) {
+				fits = false;
+			}
+		}
+		console.log(fits ? `${name}: runs with 4 KB and 16 KB pages` : `${name}: 4 KB pages only (not for Google Play)`);
+	}
 }
 
 async function stockfish() {
@@ -125,7 +181,7 @@ async function inWorkFolder(task) {
 	}
 }
 
-async function pick(repo, tag) {
+async function pick(repo, tag, optional = false) {
 	const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
 	const response = await fetch(`https://api.github.com/repos/${repo}/releases/tags/${tag}`, {
 		headers: {
@@ -134,6 +190,9 @@ async function pick(repo, tag) {
 			...(token ? { authorization: `Bearer ${token}` } : {}),
 		},
 	});
+	if (optional && response.status === 404) {
+		return null;
+	}
 	if (!response.ok) {
 		const rate = response.headers.get('x-ratelimit-remaining') === '0' ? ' The rate limit is spent; set GITHUB_TOKEN.' : '';
 		fail(`GitHub answered ${response.status} for ${repo} ${tag}.${rate}`);

@@ -1,0 +1,119 @@
+name: Engines
+
+# Builds Stockfish and Lc0 for Android with 16 KB page alignment, so the same binaries run on devices with
+# 4 KB and with 16 KB memory pages (Google Play asks for the latter). Started by hand; the binaries go to a
+# release of their own (a pre-release, so the app's latest release stays the app), where
+# tools/fetch-engine.mjs takes them from.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  STOCKFISH_TAG: sf_19
+  LC0_TAG: v0.32.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/checkout@v5
+        with:
+          repository: official-stockfish/Stockfish
+          ref: ${{ env.STOCKFISH_TAG }}
+          path: stockfish
+
+      - uses: actions/checkout@v5
+        with:
+          repository: LeelaChessZero/lc0
+          ref: ${{ env.LC0_TAG }}
+          path: lc0
+          submodules: recursive
+
+      - name: Tools
+        run: |
+          pip install meson ninja
+          echo "NDK_BIN=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_ENV"
+          mkdir -p engines
+
+      # The two ARMv8 builds the app chooses between (the Dot Product one on a CPU that has it).
+      - name: Stockfish
+        run: |
+          export PATH="$NDK_BIN:$PATH"
+          cd stockfish/src
+          for build in armv8: armv8-dotprod:_dotprod; do
+            arch="${build%%:*}"
+            suffix="${build#*:}"
+            make clean
+            make -j"$(nproc)" build ARCH="$arch" COMP=ndk EXTRALDFLAGS='-Wl,-z,max-page-size=16384'
+            llvm-strip stockfish
+            cp stockfish "$GITHUB_WORKSPACE/engines/libstockfish$suffix.so"
+          done
+
+      # Built as the official Android build (network embedded), with the same network: the one appended to
+      # the official binary, taken from the release's APK.
+      - name: Lc0
+        run: |
+          cat > android-arm64.txt <<CROSS
+          [binaries]
+          c = '$NDK_BIN/aarch64-linux-android24-clang'
+          cpp = '$NDK_BIN/aarch64-linux-android24-clang++'
+          ar = '$NDK_BIN/llvm-ar'
+          strip = '$NDK_BIN/llvm-strip'
+
+          [host_machine]
+          system = 'android'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+          CROSS
+          cd lc0
+          meson setup build --cross-file ../android-arm64.txt --buildtype release -Ddefault_library=static \
+            -Dgtest=false -Dembed=true -Dopenblas=false -Deigen=true \
+            -Dcpp_link_args="['-static-libstdc++','-Wl,-z,max-page-size=16384']" \
+            -Dc_link_args="['-Wl,-z,max-page-size=16384']"
+          ninja -C build lc0
+          "$NDK_BIN/llvm-strip" build/lc0
+          cd ..
+          gh release download "$LC0_TAG" --repo LeelaChessZero/lc0 --pattern 'lc0-*-android.apk' --dir official
+          unzip -o -q official/*.apk lib/arm64-v8a/liblc0.so -d official
+          python3 tools/engine-network.py official/lib/arm64-v8a/liblc0.so lc0/build/lc0 engines/liblc0.so
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: 16 KB alignment
+        run: python3 tools/engine-network.py --check engines/*.so
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engines
+          path: engines/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: engines
+          path: engines
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="engines-${STOCKFISH_TAG}-lc0-${LC0_TAG}"
+          cd engines
+          sha256sum *.so > SHA256SUMS.txt
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$tag" --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
+                 --title "Engines: Stockfish ${STOCKFISH_TAG#sf_}, Lc0 ${LC0_TAG}" \
+                 --notes "Stockfish ${STOCKFISH_TAG} and Lc0 ${LC0_TAG}, built from their tagged sources for Android (arm64) with 16 KB page alignment by .github/workflows/engines.yml. Lc0 carries the same network as its official Android build. GPL-3.0-or-later."
+          gh release upload "$tag" *.so SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"

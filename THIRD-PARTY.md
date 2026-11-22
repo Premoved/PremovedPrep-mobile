@@ -13,15 +13,15 @@ PremovedPrep's source is licensed under AGPL-3.0-only (see `LICENSE`). The follo
 | Chessground | [lichess-org/chessground](https://github.com/lichess-org/chessground) | GPL-3.0-or-later |
 | Capacitor | [ionic-team/capacitor](https://github.com/ionic-team/capacitor) | MIT |
 | SQLite, compiled to WebAssembly | [sqlite.org](https://sqlite.org), packaged as [@sqlite.org/sqlite-wasm](https://github.com/sqlite/sqlite-wasm) | Public domain (SQLite), Apache-2.0 (the package) |
-| Stockfish (native binary) | [official-stockfish/Stockfish](https://github.com/official-stockfish/Stockfish), the published Android (arm64) build, v19 | GPL-3.0-or-later |
-| Lc0 (native binary, with its neural network built in) | [LeelaChessZero/lc0](https://github.com/LeelaChessZero/lc0), the published Android build, v0.32.1 | GPL-3.0-or-later |
+| Stockfish (native binary) | [official-stockfish/Stockfish](https://github.com/official-stockfish/Stockfish), built for Android (arm64) from the v19 tag | GPL-3.0-or-later |
+| Lc0 (native binary, with its neural network built in) | [LeelaChessZero/lc0](https://github.com/LeelaChessZero/lc0), built for Android (arm64) from the v0.32.1 tag, with the network of its published Android build | GPL-3.0-or-later |
 
 
 A machine-generated list of every bundled dependency and its licence is written to `3rdpartylicenses.txt` by the production build.
 
 Stockfish and Lc0 are conveyed as binaries, so their licence and their source travel with them: the
-GPL-3.0 text is in `licenses/GPL-3.0.txt`, and the exact versions are the published builds named in the
-table above, whose source is the tagged release in each upstream repository.
+GPL-3.0 text is in `licenses/GPL-3.0.txt`, and the exact versions are the tags named in the table above,
+whose source is the tagged release in each upstream repository.
 
 The application itself shows these under **Third-party material**, linked from Settings and from the
 Terms. The same files are inside the APK, under `assets/public/`:
@@ -63,10 +63,11 @@ covered by this project's licence**; each set carries its own, recorded in lila'
 
 ## Engine
 
-The application ships the official Android builds of Stockfish and Lc0 (Lc0 with its network built into
-the binary) in `lib/arm64-v8a/`: Android starts a program only from the app's own native libraries.
-Nothing is committed to this repository; `tools/fetch-engine.mjs` downloads the binaries from the
-upstream releases for the build. On Android no other engine can be added.
+The application ships Stockfish and Lc0 built for Android from their tagged sources, with 16 KB page
+alignment (Lc0 with the network of its official Android build built into the binary), in `lib/arm64-v8a/`:
+Android starts a program only from the app's own native libraries. Nothing is committed to this
+repository; `.github/workflows/engines.yml` builds the binaries and `tools/fetch-engine.mjs` downloads
+them for the build. On Android no other engine can be added.
 
 ## Icons
 

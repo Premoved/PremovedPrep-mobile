@@ -1,10 +1,13 @@
 package com.premoved.nativeplugin;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.UriPermission;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -64,6 +67,8 @@ public class PremovedNativePlugin extends Plugin {
 
     private static final String PREFS = "premovedprep";
     private static final String TREE = "storageTree";
+    // Whether Documents/PremovedPrep was already there at this installation's first start (see inherited()).
+    private static final String INHERITED = "defaultInherited";
     private static final String EXTERNAL_STORAGE = "com.android.externalstorage.documents";
     private static final String DOCUMENTS = "primary:Documents";
     private static final String ROOT_NAME = "PremovedPrep";
@@ -363,6 +368,7 @@ public class PremovedNativePlugin extends Plugin {
             state.put("granted", true);
             state.put("display", "Documents");
             state.put("isDefault", true);
+            state.put("inherited", inherited());
             return state;
         }
         state.put("isDefault", false);
@@ -387,6 +393,62 @@ public class PremovedNativePlugin extends Plugin {
             return path.isEmpty() ? "Internal storage" : path;
         }
         return path.isEmpty() ? volume : volume + "/" + path;
+    }
+
+    /**
+     * Documents/PremovedPrep left by an earlier installation of the app: uninstalling leaves the folder
+     * (Android keeps shared storage), but this installation cannot see the files in it until the user picks
+     * the folder once. Looked at the first start only, before this installation writes anything there.
+     */
+    private boolean inherited() {
+        SharedPreferences prefs = prefs();
+        if (!prefs.contains(INHERITED)) {
+            File documents = defaultFolder();
+            // An update keeps the app's own files visible: only a new installation can find the folder foreign.
+            boolean there = freshInstall() && documents != null && new File(documents, ROOT_NAME).isDirectory();
+            prefs.edit().putBoolean(INHERITED, there).apply();
+            return there;
+        }
+        return prefs.getBoolean(INHERITED, false);
+    }
+
+    /** Installed, not updated: an update keeps the install time of the first installation. */
+    private boolean freshInstall() {
+        try {
+            PackageInfo info = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
+            return info.firstInstallTime == info.lastUpdateTime;
+        } catch (PackageManager.NameNotFoundException error) {
+            return false;
+        }
+    }
+
+    /** A question in the system's own dialog, for the moments before the page can ask (ok: the first button). */
+    @PluginMethod
+    public void confirm(PluginCall call) {
+        String title = call.getString("title", "");
+        String message = call.getString("message", "");
+        String ok = call.getString("ok", "OK");
+        String cancel = call.getString("cancel", "Cancel");
+        getActivity().runOnUiThread(() -> {
+            boolean[] answered = { false };
+            new AlertDialog.Builder(getActivity())
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(ok, (dialog, which) -> answer(call, answered, true))
+                .setNegativeButton(cancel, (dialog, which) -> answer(call, answered, false))
+                .setOnCancelListener((dialog) -> answer(call, answered, false))
+                .show();
+        });
+    }
+
+    private static void answer(PluginCall call, boolean[] answered, boolean ok) {
+        if (answered[0]) {
+            return;
+        }
+        answered[0] = true;
+        JSObject result = new JSObject();
+        result.put("ok", ok);
+        call.resolve(result);
     }
 
     @PluginMethod

@@ -28,7 +28,7 @@ export const PATCHES = [
 		file: "src/app/features/agent/agent-page.component.html",
 		why: "Android: the engines ship with the app (Stockfish, Lc0); none can be added, and with one page open there are no background tabs.",
 		find: "\t\t\t\t<div class=\"row-actions\">\n\t\t\t\t\t<button type=\"button\" class=\"action\" [disabled]=\"busy() !== null\" (click)=\"addEngine()\">Add an engine</button>\n\n\t\t\t\t\t<label class=\"option\">\n\t\t\t\t\t\t<input type=\"checkbox\" [checked]=\"concurrent()\" (change)=\"onConcurrent($event)\" />\n\t\t\t\t\t\tKeep engines running in background tabs\n\t\t\t\t\t</label>\n\t\t\t\t</div>\n",
-		replace: "\t\t\t\t<p class=\"empty\">These engines ship with the app. The default one starts on the Analysis Board.</p>\n",
+		replace: "",
 	},
 	{
 		file: "src/app/app.config.ts",
@@ -61,24 +61,6 @@ export const PATCHES = [
 		replace: "const chrome = chromeRem() * px(",
 	},
 	{
-		file: "src/app/features/legal/terms.component.html",
-		why: "Mobile: inside the app, the Terms name this application, as the desktop's name the Desktop App.",
-		find: "Both the website and the Desktop App are free.",
-		replace: "Both the website and the Mobile App are free.",
-	},
-	{
-		file: "src/app/features/legal/terms.component.html",
-		why: "Mobile: inside the app, the Terms name this application, as the desktop's name the Desktop App.",
-		find: "The Desktop App is free to download and install.",
-		replace: "The Mobile App is free to download and install.",
-	},
-	{
-		file: "src/app/features/legal/privacy.component.html",
-		why: "Mobile: inside the app, the Privacy Policy names this application.",
-		find: "when the desktop app checks for updates",
-		replace: "when the mobile app checks for updates",
-	},
-	{
 		file: "src/app/features/home/home.component.html",
 		why: "Android: this is the mobile application.",
 		find: "The PremovedPrep Desktop application",
@@ -89,12 +71,6 @@ export const PATCHES = [
 		why: "Android: two engines ship with the app and none can be added.",
 		find: "The application ships with <strong>Stockfish 19</strong>, running natively on your computer. You can add\n\t\t\t\t\t\t\tyour own UCI engines from Local Resources.",
 		replace: "The application ships with <strong>Stockfish 19</strong> and <strong>Leela Chess Zero</strong>, running\n\t\t\t\t\t\t\tnatively on your device. You can choose the default one from Local Resources.",
-	},
-	{
-		file: "src/app/features/home/home.component.html",
-		why: "Android: databases are indexed by the desktop application and imported here.",
-		find: "You can index your local <strong>PGN databases</strong>, enabling you to use any of them while using the\n\t\t\t\t\t\t\tapplication.",
-		replace: "You can import <strong>PGN databases</strong> indexed with the desktop application (.ppdb files), enabling\n\t\t\t\t\t\t\tyou to use any of them while using the application.",
 	},
 	{
 		file: "src/app/features/search/opponent-search/opponent-search.component.html",
@@ -131,12 +107,6 @@ export const PATCHES = [
 		why: "Android: see the Back button.",
 		find: "export class BoardToolbarComponent {\n",
 		replace: "export class BoardToolbarComponent {\n\t// Android: there are no tabs, so Back returns to the collection or the search the board was opened from.\n\t// Moving to another game of the same collection (Previous, Next) keeps that way back.\n\tprivate readonly router = inject(Router);\n\treadonly backTo = computed(() => {\n\t\tif (window.premovedDesktop?.platform !== 'android') {\n\t\t\treturn null;\n\t\t}\n\t\tconst navigation = this.router.lastSuccessfulNavigation();\n\t\tconst here = navigation?.finalUrl;\n\t\t// Only a game opened from somewhere has a way back; a clean board (the menu, Home, New board) has none.\n\t\tif (!here || !OPENED_GAME.test(this.router.serializeUrl(here))) {\n\t\t\tbackOrigin = null;\n\t\t\treturn null;\n\t\t}\n\t\tconst from = navigation?.previousNavigation?.finalUrl;\n\t\tconst url = from ? this.router.serializeUrl(from) : null;\n\t\tif (url !== null && BACK_ORIGIN.test(url)) {\n\t\t\tbackOrigin = url;\n\t\t} else if (url === null || !url.startsWith('/analysis')) {\n\t\t\tbackOrigin = null;\n\t\t}\n\t\treturn backOrigin;\n\t});\n\n\tgoBack(): void {\n\t\tconst to = this.backTo();\n\t\tif (to !== null) {\n\t\t\tvoid this.router.navigateByUrl(to);\n\t\t}\n\t}\n\n",
-	},
-	{
-		file: "src/app/features/home/home.component.html",
-		why: "Android: without this line the four section tiles fit on the first screen.",
-		find: "\t\t\t<p>An <b>all in one tournament preparation tool for chess players</b>.</p>\n",
-		replace: "",
 	},
 	{
 		file: "src/app/features/collections/collections-page.component.html",
@@ -287,5 +257,77 @@ export const PATCHES = [
 		why: "Android, tablet: see the logo above.",
 		find: "\ttoggleSidebar(): void {\n",
 		replace: "\t// Android, tablet: the menu is closed (the rail); a tap on the logo opens it rather than going Home.\n\treadonly railClosed = computed(\n\t\t() => window.premovedDesktop?.platform === 'android' && !this.viewport.isMobile() && this.collapsed(),\n\t);\n\n\topenRailFromLogo(): void {\n\t\tif (this.railClosed()) {\n\t\t\tthis.collapsed.set(false);\n\t\t}\n\t}\n\n\ttoggleSidebar(): void {\n",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.ts",
+		why: "Mobile, phone: the tabs don't fit the width, so the sections stand one under another, each under its own title, and the page scrolls (as before the tabs).",
+		find: "\treadonly tab = signal<ResourceTab>(savedTab());\n",
+		replace: "\treadonly tab = signal<ResourceTab>(savedTab());\n\t// Mobile, on a phone: every section at once, one under another. The section last touched takes the tab's\n\t// place, so a failure shows only in the section it comes from.\n\tprivate readonly phoneQuery =\n\t\twindow.premovedDesktop?.platform === 'android' ? window.matchMedia('(max-width: 599.98px)') : null;\n\treadonly stacked = signal(this.phoneQuery?.matches ?? false);\n\tprivate readonly onPhoneChange = (event: MediaQueryListEvent): void => this.stacked.set(event.matches);\n\tprivate readonly listenPhone = (() => {\n\t\tthis.phoneQuery?.addEventListener('change', this.onPhoneChange);\n\t\tinject(DestroyRef).onDestroy(() => this.phoneQuery?.removeEventListener('change', this.onPhoneChange));\n\t})();\n\n\tshows(id: ResourceTab): boolean {\n\t\treturn this.stacked() || this.tab() === id;\n\t}\n\n\ttabLabel(id: ResourceTab): string {\n\t\treturn TABS.find((one) => one.id === id)?.label ?? '';\n\t}\n\n\ttouched(id: ResourceTab): void {\n\t\tif (this.stacked() && this.tab() !== id) {\n\t\t\tthis.tab.set(id);\n\t\t}\n\t}\n\n\tfailureIn(id: ResourceTab): string | null {\n\t\treturn !this.stacked() || this.tab() === id ? this.failure() : null;\n\t}\n",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t\t\t\t</dl>\n\t\t\t\t\t@if (failure(); as message) {",
+		replace: "\t\t\t\t\t</dl>\n\t\t\t\t\t@if (failureIn('location'); as message) {",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "<p class=\"empty\">No folder chosen yet.</p>\n\t\t\t\t\t@if (failure(); as message) {",
+		replace: "<p class=\"empty\">No folder chosen yet.</p>\n\t\t\t\t\t@if (failureIn('location'); as message) {",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t\t\t@if (failure(); as message) {\n\t\t\t\t\t<p class=\"failure\" role=\"alert\">{{ message }}</p>\n\t\t\t\t}\n\t\t\t</section>\n\t\t}\n\n\t\t@if (tab() === 'search') {",
+		replace: "\t\t\t\t@if (failureIn('engines'); as message) {\n\t\t\t\t\t<p class=\"failure\" role=\"alert\">{{ message }}</p>\n\t\t\t\t}\n\t\t\t</section>\n\t\t}\n\n\t\t@if (tab() === 'search') {",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t\t\t@if (failure(); as message) {\n\t\t\t\t\t<p class=\"failure\" role=\"alert\">{{ message }}</p>\n\t\t\t\t}\n\t\t\t\t<div class=\"row-actions\">\n\t\t\t\t\t<button type=\"button\" class=\"action\" [disabled]=\"busy() !== null\" (click)=\"addDatabase()\">",
+		replace: "\t\t\t\t@if (failureIn('search'); as message) {\n\t\t\t\t\t<p class=\"failure\" role=\"alert\">{{ message }}</p>\n\t\t\t\t}\n\t\t\t\t<div class=\"row-actions\">\n\t\t\t\t\t<button type=\"button\" class=\"action\" [disabled]=\"busy() !== null\" (click)=\"addDatabase()\">",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t\t\t@if (failure(); as message) {\n\t\t\t\t\t<p class=\"failure\" role=\"alert\">{{ message }}</p>\n\t\t\t\t}\n\t\t\t\t<div class=\"row-actions\">\n\t\t\t\t\t<button type=\"button\" class=\"action\" [disabled]=\"busy() !== null\" (click)=\"openPicker()\">",
+		replace: "\t\t\t\t@if (failureIn('positions'); as message) {\n\t\t\t\t\t<p class=\"failure\" role=\"alert\">{{ message }}</p>\n\t\t\t\t}\n\t\t\t\t<div class=\"row-actions\">\n\t\t\t\t\t<button type=\"button\" class=\"action\" [disabled]=\"busy() !== null\" (click)=\"openPicker()\">",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: the tabs don't fit the width, so the sections stand one under another, each under its own title, and the page scrolls (as before the tabs).",
+		find: "\t\t@if (tab() === 'location') {\n\t\t\t<section class=\"card\">",
+		replace: "\t\t@if (shows('location')) {\n\t\t\t@if (stacked()) {\n\t\t\t\t<h2 class=\"stacked-title\">{{ tabLabel('location') }}</h2>\n\t\t\t}\n\t\t\t<section class=\"card\" (pointerdown)=\"touched('location')\">",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t@if (tab() === 'engines') {\n\t\t\t<section class=\"card\">",
+		replace: "\t\t@if (shows('engines')) {\n\t\t\t@if (stacked()) {\n\t\t\t\t<h2 class=\"stacked-title\">{{ tabLabel('engines') }}</h2>\n\t\t\t}\n\t\t\t<section class=\"card\" (pointerdown)=\"touched('engines')\">",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t@if (tab() === 'search') {\n\t\t\t<section class=\"card\">",
+		replace: "\t\t@if (shows('search')) {\n\t\t\t@if (stacked()) {\n\t\t\t\t<h2 class=\"stacked-title\">{{ tabLabel('search') }}</h2>\n\t\t\t}\n\t\t\t<section class=\"card\" (pointerdown)=\"touched('search')\">",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile, phone: see the sections above.",
+		find: "\t\t@if (tab() === 'positions') {\n\t\t\t<section class=\"card\">",
+		replace: "\t\t@if (shows('positions')) {\n\t\t\t@if (stacked()) {\n\t\t\t\t<h2 class=\"stacked-title\">{{ tabLabel('positions') }}</h2>\n\t\t\t}\n\t\t\t<section class=\"card\" (pointerdown)=\"touched('positions')\">",
+	},
+	{
+		file: "src/app/features/agent/agent-page.component.html",
+		why: "Mobile: the engines' own maximums (1024 threads, 33554432 MB hash) say nothing about this device, so only the author is shown.",
+		find: "\t\t\t\t\t\t\t\t\t\t@if (engine.maxThreads) {\n\t\t\t\t\t\t\t\t\t\t\t<span>{{ engine.maxThreads }} threads</span>\n\t\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t\t\t@if (engine.maxHashMb) {\n\t\t\t\t\t\t\t\t\t\t\t<span>{{ engine.maxHashMb }} MB hash</span>\n\t\t\t\t\t\t\t\t\t\t}\n",
+		replace: "",
+	},
+	{
+		file: "src/app/core/services/analysis-draft.store.ts",
+		why: "Mobile: one page at a time, so the board's unsaved work is kept in one slot that outlives the app's process (a session id is new at every start), and the board shows it again when the app is opened (install.ts).",
+		find: "\t\t\tconst existing = sessionStorage.getItem(TAB_KEY);\n",
+		replace: "\t\t\tconst existing = window.premovedDesktop?.platform === 'android' ? 'mobile' : sessionStorage.getItem(TAB_KEY);\n",
 	},
 ];

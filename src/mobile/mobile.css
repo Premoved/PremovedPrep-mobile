@@ -462,6 +462,42 @@ html.android app-agent-page .action {
 	padding-right: 1rem !important;
 }
 
+/* On a phone the tabs don't fit the width: the sections stand one under another, each under its title
+   (agent-page, tools/patches.mjs), and a database's buttons go under its name, so its state has the
+   whole width. */
+@media (max-width: 599.98px) {
+	html.android app-agent-page .tabs {
+		display: none !important;
+	}
+
+	html.android app-agent-page .stacked-title {
+		margin: 1.75rem 0 0.6rem !important;
+		color: var(--text-strong);
+		font-size: 1.1rem;
+	}
+
+	html.android app-agent-page .tabs + .stacked-title {
+		margin-top: 0 !important;
+	}
+
+	html.android app-agent-page .card {
+		border-top: 1px solid var(--bg-border) !important;
+		border-radius: 10px !important;
+	}
+
+	html.android app-agent-page .row {
+		flex-wrap: wrap !important;
+	}
+
+	html.android app-agent-page .row-main {
+		flex: 1 1 100% !important;
+	}
+
+	html.android app-agent-page .row-name {
+		white-space: normal !important;
+	}
+}
+
 /* Settings */
 html.android .settings-page :is(.segment, .link-btn, .mini-btn, .danger-link, .ghost-btn, .primary-btn) {
 	min-height: 44px !important;
@@ -529,6 +565,11 @@ html.android .home-page .hero-body {
 		gap: 1.5rem !important;
 	}
 
+	/* "An all in one tournament preparation tool for chess players": on a tablet the four tiles need its room. */
+	html.android .home-page .hero-body p + p {
+		display: none !important;
+	}
+
 	html.android .home-page .first-screen {
 		height: calc(100dvh - 56px - 3rem);
 		min-height: 30rem;
@@ -548,6 +589,48 @@ html.android .home-page .hero-body {
 	}
 }
 
+/* Phone: the text, then the four tiles one under another, the icon beside the words, filling the rest of
+   the first screen (under the 56px bar). A phone too short for them lets the page grow and scroll. */
+@media (max-width: 599.98px) {
+	html.android .home-page .first-screen {
+		min-height: calc(100dvh - 56px - 3rem);
+	}
+
+	html.android .home-page .tiles {
+		flex: 1 1 auto;
+		grid-template-columns: minmax(0, 1fr) !important;
+		grid-template-rows: repeat(4, minmax(min-content, 1fr));
+		gap: 0.6rem !important;
+	}
+
+	html.android .home-page .tile {
+		display: grid !important;
+		grid-template-columns: 3.2rem minmax(0, 1fr);
+		grid-template-rows: auto auto;
+		align-content: center;
+		column-gap: 0.9rem;
+		row-gap: 0.15rem;
+		padding: 0.7rem 1rem !important;
+		text-align: left !important;
+	}
+
+	html.android .home-page .tile-icon {
+		grid-row: 1 / span 2;
+		align-self: center;
+		width: 3.2rem !important;
+		height: 3.2rem !important;
+	}
+
+	html.android .home-page .tile-title {
+		align-self: end;
+	}
+
+	html.android .home-page .tile-desc {
+		align-self: start;
+		max-width: none;
+	}
+}
+
 @media (min-width: 900px) {
 	html.android .home-page .first-screen {
 		height: calc(100dvh - 3rem);
@@ -562,41 +645,49 @@ html.android .home-page .hero-body {
 
 /* ------------------------------------------------------------------ Search opponent: enlarged results */
 
-/* The button at the right end of the result tabs (opponent-search, tools/patches.mjs). */
+/* Only on a tablet held sideways, where the page doesn't scroll; on a phone and upright the page scrolls
+   to the results, so there is no button. */
 html.android .result-tabs .result-zoom {
-	flex: 0 0 auto;
-	align-self: center;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 44px;
-	height: 40px;
-	margin: 0 0.25rem 0.25rem auto;
-	padding: 0;
-	border: 1px solid var(--bg-border);
-	border-radius: 10px;
-	background: var(--bg-elevated);
-	color: var(--accent-blue);
-	font-family: inherit;
-	font-size: 1.3rem;
-	line-height: 1;
+	display: none;
 }
 
-html.android .result-tabs .result-zoom svg {
-	width: 22px;
-	height: 22px;
-}
+@media (min-width: 900px) and (orientation: landscape) {
+	/* The button at the right end of the result tabs (opponent-search, tools/patches.mjs). */
+	html.android .result-tabs .result-zoom {
+		flex: 0 0 auto;
+		align-self: center;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 40px;
+		margin: 0 0.25rem 0.25rem auto;
+		padding: 0;
+		border: 1px solid var(--bg-border);
+		border-radius: 10px;
+		background: var(--bg-elevated);
+		color: var(--accent-blue);
+		font-family: inherit;
+		font-size: 1.3rem;
+		line-height: 1;
+	}
 
-html.android .result-tabs .result-zoom.on {
-	background: var(--bg-active-move);
-	border-color: var(--accent-blue);
-}
+	html.android .result-tabs .result-zoom svg {
+		width: 22px;
+		height: 22px;
+	}
 
-/* Enlarged: the page header (Database Search, Search opponent / Advanced search) and the search with the
-   player's profile give their room to the results. */
-html.android.search-zoomed .search-page > .page-header,
-html.android.search-zoomed app-opponent-search .search-section {
-	display: none !important;
+	html.android .result-tabs .result-zoom.on {
+		background: var(--bg-active-move);
+		border-color: var(--accent-blue);
+	}
+
+	/* Enlarged: the page header (Database Search, Search opponent / Advanced search) and the search with the
+	   player's profile give their room to the results. */
+	html.android.search-zoomed .search-page > .page-header,
+	html.android.search-zoomed app-opponent-search .search-section {
+		display: none !important;
+	}
 }
 
 /* ------------------------------------------------------------------ Game data / Save (game-file-dialog) */

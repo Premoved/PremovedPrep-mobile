@@ -10,6 +10,9 @@ export interface FolderState {
 	readonly display: string | null;
 	// Nothing picked: Documents on the device's own storage, used from the first start (Android 11 and later).
 	readonly isDefault: boolean;
+	// With isDefault: Documents/PremovedPrep was left by an earlier installation, whose files this one
+	// cannot see until the folder is picked once.
+	readonly inherited?: boolean;
 }
 
 export interface FileStat {
@@ -41,6 +44,8 @@ export interface PremovedNativePlugin {
 
 	folderPick(): Promise<FolderState & { picked: boolean }>;
 	folderState(): Promise<FolderState>;
+	// A question in the system's dialog, before the page can ask; ok: the first button was pressed.
+	confirm(options: { title: string; message: string; ok: string; cancel: string }): Promise<{ ok: boolean }>;
 
 	// Paths are relative to the picked folder, with "/" between names.
 	fsList(options: { path: string }): Promise<{ exists: boolean; entries: DirEntry[] }>;

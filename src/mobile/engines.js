@@ -2,7 +2,17 @@
 // allow-list. The processes are started by the plugin (native/android), from the binaries shipped in the
 // APK (Stockfish, Lc0); on Android an engine picked by the user cannot be run, so there are only these.
 
+import { MOBILE_VERSION } from './version';
+
 const PROBE_TIMEOUT_MS = 8_000;
+
+// A closed engine is kept running, idle, so the next start on the Analysis Board answers at once: starting
+// one means reading its whole binary (Stockfish carries its networks, about 100 MB), which takes seconds on
+// a tablet. One per engine; while idle it keeps the smallest hash.
+const PARKED_HASH_MB = 16;
+const PARK_READY_MS = 3_000;
+// After the app has started, the first engine is started in the background, once the page has settled.
+const WARM_AFTER_MS = 4_000;
 
 // Shown until the engine has answered uci with its own name.
 const NAMES = { stockfish: 'Stockfish', lc0: 'Lc0' };
@@ -17,17 +27,29 @@ export class Engines {
 		this.sessions = new Map();
 		// Sessions opened to read an engine's options (probe): their lines go there, not to the page.
 		this.probes = new Map();
+		// Idle engines kept running, by engine (bundledId): { sessionId, ready }. Their lines go nowhere.
+		this.parked = new Map();
+		this.idleLines = new Map();
 		this.cpus = null;
 
 		void native.addListener('engineLine', ({ sessionId, line }) => {
 			const probe = this.probes.get(sessionId);
+			const idle = this.idleLines.get(sessionId);
 			if (probe) {
 				probe(line);
+			} else if (idle) {
+				idle(line);
 			} else if (this.sessions.has(sessionId)) {
 				this.emit('engine.line', { sessionId, line });
 			}
 		});
 		void native.addListener('engineClosed', ({ sessionId }) => {
+			this.idleLines.delete(sessionId);
+			for (const [bundledId, parked] of this.parked) {
+				if (parked.sessionId === sessionId) {
+					this.parked.delete(bundledId);
+				}
+			}
 			if (this.sessions.delete(sessionId)) {
 				this.emit('engine.closed', { sessionId });
 			}
@@ -48,13 +70,22 @@ export class Engines {
 		}));
 	}
 
-	// The bundled engines, read again at every start: an update of the app may bring new versions. Each
-	// keeps its id across starts, so the default chosen on the Engines tab stays chosen.
+	// The bundled engines, read once per version of the app (an update may bring new versions of them), and
+	// not at every start: each read starts the engine. Each keeps its id across starts, so the default chosen
+	// on the Engines tab stays chosen.
 	async adoptBundled() {
 		const info = await this.native.info();
 		this.cpus = info.cpus;
 		const shipped = Array.isArray(info.engines) ? info.engines : info.engine ? ['stockfish'] : [];
 		const known = this.settings.value.engines;
+		const readFor = `${MOBILE_VERSION}:${shipped.join(',')}`;
+		const adopted = shipped.map((bundledId) =>
+			known.find((engine) => engine.bundled === true && (engine.bundledId ?? 'stockfish') === bundledId),
+		);
+		if (this.settings.value.enginesReadFor === readFor && adopted.every(Boolean)) {
+			this.warmSoon(shipped[0]);
+			return adopted[0] ?? null;
+		}
 		const engines = [];
 		// One after another: two engines starting at once on a phone slow each other's answer.
 		for (const bundledId of shipped) {
@@ -74,19 +105,76 @@ export class Engines {
 				...probed,
 			});
 		}
-		this.settings.update({ engines });
+		this.settings.update({ engines, enginesReadFor: readFor });
+		this.warmSoon(shipped[0]);
 		return engines[0] ?? null;
 	}
 
-	open(engineId) {
+	// The first engine started in the background, once, so the Analysis Board's first start is quick.
+	warmSoon(bundledId) {
+		if (!bundledId) {
+			return;
+		}
+		setTimeout(() => {
+			if (this.parked.has(bundledId) || [...this.sessions.values()].some((one) => one.bundledId === bundledId)) {
+				return;
+			}
+			this.native
+				.engineOpen({ engine: bundledId })
+				.then(({ sessionId }) => this.park(sessionId, bundledId))
+				.catch(() => undefined);
+		}, WARM_AFTER_MS);
+	}
+
+	// An engine set aside, idle: whatever it was doing is stopped, its hash made small, and it is ready once
+	// it answers isready.
+	park(sessionId, bundledId) {
+		if (this.parked.has(bundledId)) {
+			void this.native.engineClose({ sessionId }).catch(() => undefined);
+			return;
+		}
+		let settle;
+		const ready = new Promise((resolve) => {
+			settle = resolve;
+		});
+		const timer = setTimeout(() => settle(false), PARK_READY_MS);
+		this.idleLines.set(sessionId, (line) => {
+			if (line.trim() === 'readyok') {
+				clearTimeout(timer);
+				settle(true);
+			}
+		});
+		this.parked.set(bundledId, { sessionId, ready });
+		for (const command of ['stop', `setoption name Hash value ${PARKED_HASH_MB}`, 'setoption name MultiPV value 1', 'ucinewgame', 'isready']) {
+			void this.native.engineSend({ sessionId, command }).catch(() => undefined);
+		}
+	}
+
+	// The idle engine, if one is kept and still answers: it becomes the page's session.
+	async takeParked(bundledId) {
+		const parked = this.parked.get(bundledId);
+		if (!parked) {
+			return null;
+		}
+		this.parked.delete(bundledId);
+		if (!(await parked.ready)) {
+			this.idleLines.delete(parked.sessionId);
+			void this.native.engineClose({ sessionId: parked.sessionId }).catch(() => undefined);
+			return null;
+		}
+		this.idleLines.delete(parked.sessionId);
+		return parked.sessionId;
+	}
+
+	async open(engineId) {
 		const engine = this.settings.value.engines.find((entry) => entry.id === engineId);
 		if (!engine) {
 			throw new Error(`No engine with id ${engineId}`);
 		}
-		return this.native.engineOpen({ engine: engine.bundledId ?? 'stockfish' }).then(({ sessionId }) => {
-			this.sessions.set(sessionId, { engineId });
-			return { sessionId, engineId, engineName: engine.name };
-		});
+		const bundledId = engine.bundledId ?? 'stockfish';
+		const sessionId = (await this.takeParked(bundledId)) ?? (await this.native.engineOpen({ engine: bundledId })).sessionId;
+		this.sessions.set(sessionId, { engineId, bundledId });
+		return { sessionId, engineId, engineName: engine.name };
 	}
 
 	send(sessionId, command) {
@@ -97,10 +185,17 @@ export class Engines {
 	}
 
 	close(sessionId) {
-		if (!this.sessions.delete(sessionId)) {
+		const session = this.sessions.get(sessionId);
+		if (!session) {
 			return;
 		}
-		// The plugin sends quit, so the engine frees its hash table, then ends the process.
+		this.sessions.delete(sessionId);
+		// Kept running, idle, for the next start; a second one of the same engine is ended (the plugin sends
+		// quit, so the engine frees its hash table, then ends the process).
+		if (!this.parked.has(session.bundledId)) {
+			this.park(sessionId, session.bundledId);
+			return;
+		}
 		void this.native.engineClose({ sessionId }).catch(() => undefined);
 	}
 
