@@ -214,7 +214,7 @@ export const PATCHES = [
 		file: "src/app/features/analysis-board/analysis-board.component.ts",
 		why: "Android: see ?fresh.",
 		find: "\t\t// A board opened with nothing in the URL is this tab's own analysis, from where it left off.\n",
-		replace: "\t\t// Android: ?fresh. The board's own work (its draft) is shown first, so asking to discard or save it\n\t\t// is about what the user sees; then the board starts empty and the URL forgets the game it showed.\n\t\teffect(() => {\n\t\t\tconst board = this.board();\n\t\t\tif (!board || !this.fresh()) {\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tuntracked(() => {\n\t\t\t\tif (!this.draftRestored && !this.game() && !this.item() && !this.local()) {\n\t\t\t\t\tthis.draftRestored = true;\n\t\t\t\t\tthis.restoreDraft(board, null);\n\t\t\t\t}\n\t\t\t\tvoid this.confirmDiscardOrSave().then((proceed) => {\n\t\t\t\t\tif (proceed) {\n\t\t\t\t\t\tthis.drafts.clear(this.tabSlot);\n\t\t\t\t\t\tthis.tree.reset(DEFAULT_FEN);\n\t\t\t\t\t\tthis.tree.markSaved();\n\t\t\t\t\t\tboard.refresh();\n\t\t\t\t\t}\n\t\t\t\t\tvoid this.router.navigate([], {\n\t\t\t\t\t\tqueryParams: proceed\n\t\t\t\t\t\t\t? { fresh: null, game: null, db: null, item: null, local: null, ply: null, line: null }\n\t\t\t\t\t\t\t: { fresh: null },\n\t\t\t\t\t\tqueryParamsHandling: 'merge',\n\t\t\t\t\t\treplaceUrl: true,\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t});\n\t\t});\n\n\t\t// A board opened with nothing in the URL is this tab's own analysis, from where it left off.\n",
+		replace: "\t\t// Android: ?fresh. The board's own work (its draft) is shown first, so asking to discard or save it\n\t\t// is about what the user sees; then the board starts empty and the URL forgets the game it showed.\n\t\teffect(() => {\n\t\t\tconst board = this.board();\n\t\t\tif (!board || !this.fresh()) {\n\t\t\t\treturn;\n\t\t\t}\n\t\t\t// After the board's own start (ChessBoardComponent.ngOnInit empties the tree).\n\t\t\tsetTimeout(() => {\n\t\t\t\tif (!this.draftRestored && !this.game() && !this.item() && !this.local()) {\n\t\t\t\t\tthis.draftRestored = true;\n\t\t\t\t\tthis.restoreDraft(board, null);\n\t\t\t\t}\n\t\t\t\tvoid this.confirmDiscardOrSave().then((proceed) => {\n\t\t\t\t\tif (proceed) {\n\t\t\t\t\t\tthis.drafts.clear(this.tabSlot);\n\t\t\t\t\t\tthis.tree.reset(DEFAULT_FEN);\n\t\t\t\t\t\tthis.tree.markSaved();\n\t\t\t\t\t\tboard.refresh();\n\t\t\t\t\t}\n\t\t\t\t\tvoid this.router.navigate([], {\n\t\t\t\t\t\tqueryParams: proceed\n\t\t\t\t\t\t\t? { fresh: null, game: null, db: null, item: null, local: null, ply: null, line: null }\n\t\t\t\t\t\t\t: { fresh: null },\n\t\t\t\t\t\tqueryParamsHandling: 'merge',\n\t\t\t\t\t\treplaceUrl: true,\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t});\n\t\t});\n\n\t\t// A board opened with nothing in the URL is this tab's own analysis, from where it left off.\n",
 	},
 	{
 		file: "src/app/features/settings/settings-page.component.html",
@@ -335,5 +335,11 @@ export const PATCHES = [
 		why: "Mobile: at a cold start the board can take longer than the autosave's 700 ms to appear; the autosave then found a clean board and threw away the draft it was about to take back. A blank board keeps its draft until it has taken it back.",
 		find: "\t\tthis.draftTimer = null;\n\n\t\tif (!this.tree.isDirty()) {\n",
 		replace: "\t\tthis.draftTimer = null;\n\n\t\tif (!this.tree.isDirty()) {\n\t\t\tif (\n\t\t\t\twindow.premovedDesktop?.platform === 'android' &&\n\t\t\t\t!this.draftRestored &&\n\t\t\t\t!this.game() &&\n\t\t\t\t!this.item() &&\n\t\t\t\t!this.local()\n\t\t\t) {\n\t\t\t\treturn true;\n\t\t\t}\n",
+	},
+	{
+		file: "src/app/features/analysis-board/analysis-board.component.ts",
+		why: "Mobile: the board's draft is taken back after the board has started: ChessBoardComponent.ngOnInit empties the tree, and on Android it ran after the restore, so the unsaved analysis was taken back and at once thrown away.",
+		find: "\t\t\tthis.draftRestored = true;\n\t\t\tuntracked(() => this.restoreDraft(board, null));",
+		replace: "\t\t\tthis.draftRestored = true;\n\t\t\tsetTimeout(() => this.restoreDraft(board, null));",
 	},
 ];
