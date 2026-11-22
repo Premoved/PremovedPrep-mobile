@@ -330,4 +330,10 @@ export const PATCHES = [
 		find: "\t\treturn owner.length > 0 ? owner : this.tabId();\n",
 		replace: "\t\t// Mobile: always the same slot. The page's tab id is new at every start (no tabs are restored).\n\t\treturn window.premovedDesktop?.platform === 'android' ? 'mobile' : owner.length > 0 ? owner : this.tabId();\n",
 	},
+	{
+		file: "src/app/features/analysis-board/analysis-board.component.ts",
+		why: "Mobile: at a cold start the board can take longer than the autosave's 700 ms to appear; the autosave then found a clean board and threw away the draft it was about to take back. A blank board keeps its draft until it has taken it back.",
+		find: "\t\tthis.draftTimer = null;\n\n\t\tif (!this.tree.isDirty()) {\n",
+		replace: "\t\tthis.draftTimer = null;\n\n\t\tif (!this.tree.isDirty()) {\n\t\t\tif (\n\t\t\t\twindow.premovedDesktop?.platform === 'android' &&\n\t\t\t\t!this.draftRestored &&\n\t\t\t\t!this.game() &&\n\t\t\t\t!this.item() &&\n\t\t\t\t!this.local()\n\t\t\t) {\n\t\t\t\treturn true;\n\t\t\t}\n",
+	},
 ];
