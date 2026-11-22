@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Manual re-run.
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The desktop app this one is made from: tools/prepare.mjs looks for it in desktop/.
+      - uses: actions/checkout@v5
+        with:
+          repository: Premoved/PremovedPrep-App
+          path: desktop
+
+      # Only the build is checked here: the piece and board images are not fetched.
+      - name: Empty piece and board folders
+        run: mkdir -p desktop/public/piece desktop/public/board
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      # Clean install from package-lock.json.
+      - run: npm ci
+
+      # The desktop sources with this repository's files and edits (each edit must still apply),
+      # then the Angular production build into www/.
+      - name: Web build
+        run: npm run build
+
+      - name: Types (workers)
+        run: npx tsc -p tsconfig.worker.json --noEmit
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Android project
+        run: npx cap sync android && npm run android:patch
+
+      # Debug build, without the engines (npm run engine): it checks the native plugin compiles.
+      - name: Android build
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
