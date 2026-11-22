@@ -61,6 +61,24 @@ export const PATCHES = [
 		replace: "const chrome = chromeRem() * px(",
 	},
 	{
+		file: "src/app/features/legal/terms.component.html",
+		why: "Mobile: inside the app, the Terms name this application, as the desktop's name the Desktop App.",
+		find: "Both the website and the Desktop App are free.",
+		replace: "Both the website and the Mobile App are free.",
+	},
+	{
+		file: "src/app/features/legal/terms.component.html",
+		why: "Mobile: inside the app, the Terms name this application, as the desktop's name the Desktop App.",
+		find: "The Desktop App is free to download and install.",
+		replace: "The Mobile App is free to download and install.",
+	},
+	{
+		file: "src/app/features/legal/privacy.component.html",
+		why: "Mobile: inside the app, the Privacy Policy names this application.",
+		find: "when the desktop app checks for updates",
+		replace: "when the mobile app checks for updates",
+	},
+	{
 		file: "src/app/features/home/home.component.html",
 		why: "Android: this is the mobile application.",
 		find: "The PremovedPrep Desktop application",
