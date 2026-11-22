@@ -162,9 +162,8 @@ html.android .shell.tabbed {
 		box-sizing: border-box !important;
 	}
 
+	/* Signed out, Log in takes Account's place beside Preferences: two rows in all, no scroll in the rail. */
 	html.android .sidebar.collapsed .sidebar-footer .footer-btn.login-btn {
-		grid-column: 1 / -1;
-		width: 88px !important;
 		background: var(--accent-fill) !important;
 		border-color: var(--accent-fill) !important;
 		color: #ffffff !important;
