@@ -78,15 +78,26 @@ jobs:
           options_file=meson_options.txt
           [ -f meson.options ] && options_file=meson.options
           cat "$options_file"
-          opts=()
-          for pair in gtest:false embed:true openblas:false mkl:false dnnl:false accelerate:false opencl:false \
-                      cudnn:false plain_cuda:false cutlass:false dx:false onnx:false onednn:false xla:false \
-                      sycl:false metal:false tensorflow:false ispc:false neon:false hip:false corex:false; do
-            name="${pair%%:*}"
-            if grep -q "option('$name'" "$options_file"; then
-              opts+=("-D$name=${pair#*:}")
-            fi
-          done
+          # Booleans get the value below; a combo is set to its "off" choice, a feature to "disabled".
+          mapfile -t opts < <(python3 - "$options_file" <<'PY'
+          import re, sys
+          wanted = {'gtest': 'false', 'embed': 'true', 'openblas': 'false', 'mkl': 'false', 'dnnl': 'false',
+                    'accelerate': 'false', 'opencl': 'false', 'cudnn': 'false', 'plain_cuda': 'false',
+                    'cutlass': 'false', 'dx': 'false', 'onnx': 'false', 'onednn': 'false', 'xla': 'false',
+                    'sycl': 'false', 'metal': 'false', 'tensorflow': 'false', 'ispc': 'false', 'neon': 'false',
+                    'hip': 'false', 'corex': 'false'}
+          text = open(sys.argv[1]).read()
+          for name, kind, rest in re.findall(r"option\(\s*'([^']+)'\s*,\s*type\s*:\s*'(\w+)'(.*?)\)\s*(?=option\(|$)", text, re.S):
+              if name not in wanted:
+                  continue
+              if kind == 'boolean':
+                  print(f'-D{name}={wanted[name]}')
+              elif kind == 'combo' and "'off'" in rest:
+                  print(f'-D{name}=off')
+              elif kind == 'feature':
+                  print(f'-D{name}=disabled')
+          PY
+          )
           echo "Options: ${opts[*]}"
           meson setup build --cross-file ../android-arm64.txt --buildtype release -Ddefault_library=static "${opts[@]}" \
             -Dcpp_link_args="['-static-libstdc++','-Wl,-z,max-page-size=16384']" \
