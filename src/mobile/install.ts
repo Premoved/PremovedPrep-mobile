@@ -77,6 +77,47 @@ async function askForLeftFolder(store: LocalStore): Promise<void> {
 	}
 }
 
+// The WebView writes localStorage to disk a few seconds later: an app swiped away right after leaving it
+// lost the draft just written. So when the app goes to the background the draft and the board's address
+// are also kept by the plugin (written at once), and put back before the page starts.
+const KEPT = { drafts: DRAFTS_KEY, resume: RESUME_KEY } as const;
+
+function keepForRestart(): void {
+	try {
+		for (const [key, storage] of Object.entries(KEPT)) {
+			void Native.keepSet({ key, value: localStorage.getItem(storage) ?? '' }).catch(() => undefined);
+		}
+	} catch {
+		// Storage unavailable: nothing to keep.
+	}
+}
+
+function savedAt(drafts: string | null): number {
+	try {
+		const all = JSON.parse(drafts ?? 'null') as Record<string, { savedAt?: number }> | null;
+		return all?.[DRAFT_SLOT]?.savedAt ?? 0;
+	} catch {
+		return 0;
+	}
+}
+
+// Before the page starts: the copies the plugin kept, where they are newer than what localStorage holds.
+async function restoreKept(): Promise<void> {
+	try {
+		const { values } = await Native.keepGet({ keys: Object.keys(KEPT) });
+		const drafts = values['drafts'] || null;
+		const resume = values['resume'] || null;
+		if (drafts && savedAt(drafts) > savedAt(localStorage.getItem(DRAFTS_KEY))) {
+			localStorage.setItem(DRAFTS_KEY, drafts);
+			if (resume) {
+				localStorage.setItem(RESUME_KEY, resume);
+			}
+		}
+	} catch {
+		// Nothing kept, or the plugin unavailable: localStorage as it is.
+	}
+}
+
 // When the app goes to the background: remember the board if the user is on it; anywhere else, nothing.
 function rememberBoard(): void {
 	try {
@@ -97,7 +138,6 @@ function install(): void {
 	// mobile.css keys every Android-only rule on this class, so the same styles stay inert in a browser.
 	document.documentElement.classList.add('android');
 	guardLongPress();
-	resumeBoard();
 
 	const settings = new Settings();
 	const store = new LocalStore(files, () => Native.folderState());
@@ -145,11 +185,10 @@ function install(): void {
 		}
 		rememberBoard();
 		const answer = answerers.get('unsaved');
-		if (answer) {
-			void Promise.resolve()
-				.then(answer)
-				.catch(() => undefined);
-		}
+		void Promise.resolve()
+			.then(answer)
+			.catch(() => undefined)
+			.then(keepForRestart);
 	});
 
 	const api: DesktopApi = {
@@ -270,6 +309,12 @@ function isDark(color: string): boolean {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b < 128;
 }
 
+// Installed at once, as the desktop's preload: modules read window.premovedDesktop as they load.
 if (Capacitor.getPlatform() === 'android') {
 	install();
 }
+
+// The page starts once this is done (main.ts): the drafts kept by the plugin are back in localStorage, and an
+// app left on the Analysis Board with unsaved work opens on it again.
+export const started: Promise<void> =
+	Capacitor.getPlatform() === 'android' ? restoreKept().then(resumeBoard) : Promise.resolve();

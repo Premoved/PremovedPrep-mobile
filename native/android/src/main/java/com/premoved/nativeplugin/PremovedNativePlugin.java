@@ -69,6 +69,8 @@ public class PremovedNativePlugin extends Plugin {
     private static final String TREE = "storageTree";
     // Whether Documents/PremovedPrep was already there at this installation's first start (see inherited()).
     private static final String INHERITED = "defaultInherited";
+    // Values kept for the next start (keepSet, keepGet).
+    private static final String KEPT = "kept.";
     private static final String EXTERNAL_STORAGE = "com.android.externalstorage.documents";
     private static final String DOCUMENTS = "primary:Documents";
     private static final String ROOT_NAME = "PremovedPrep";
@@ -448,6 +450,34 @@ public class PremovedNativePlugin extends Plugin {
         answered[0] = true;
         JSObject result = new JSObject();
         result.put("ok", ok);
+        call.resolve(result);
+    }
+
+    /** Small values kept for the next start, written at once (the WebView writes localStorage seconds later). */
+    @PluginMethod
+    public void keepSet(PluginCall call) {
+        String key = call.getString("key", "");
+        String value = call.getString("value", "");
+        if (key == null || key.isEmpty()) {
+            call.reject("No key", "BAD_REQUEST");
+            return;
+        }
+        prefs().edit().putString(KEPT + key, value).commit();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void keepGet(PluginCall call) {
+        JSObject values = new JSObject();
+        JSArray keys = call.getArray("keys", new JSArray());
+        for (int i = 0; i < keys.length(); i++) {
+            String key = keys.optString(i, "");
+            if (!key.isEmpty()) {
+                values.put(key, prefs().getString(KEPT + key, null));
+            }
+        }
+        JSObject result = new JSObject();
+        result.put("values", values);
         call.resolve(result);
     }
 

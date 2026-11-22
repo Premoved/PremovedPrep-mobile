@@ -44,6 +44,9 @@ export interface PremovedNativePlugin {
 
 	folderPick(): Promise<FolderState & { picked: boolean }>;
 	folderState(): Promise<FolderState>;
+	// Small values kept by the plugin, written to disk at once (localStorage is written seconds later).
+	keepSet(options: { key: string; value: string }): Promise<void>;
+	keepGet(options: { keys: string[] }): Promise<{ values: Record<string, string | null> }>;
 	// A question in the system's dialog, before the page can ask; ok: the first button was pressed.
 	confirm(options: { title: string; message: string; ok: string; cancel: string }): Promise<{ ok: boolean }>;
 
