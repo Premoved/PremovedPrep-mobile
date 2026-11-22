@@ -4,7 +4,8 @@
 
 import { MOBILE_VERSION } from './version';
 
-const PROBE_TIMEOUT_MS = 8_000;
+// Lc0 reads its network at the start: on a slow tablet that takes a while.
+const PROBE_TIMEOUT_MS = 20_000;
 
 // A closed engine is kept running, idle, so the next start on the Analysis Board answers at once: starting
 // one means reading its whole binary (Stockfish carries its networks, about 100 MB), which takes seconds on
@@ -105,7 +106,8 @@ export class Engines {
 				...probed,
 			});
 		}
-		this.settings.update({ engines, enginesReadFor: readFor });
+		// Read again at the next start if one of them did not answer.
+		this.settings.update({ engines, enginesReadFor: engines.length === shipped.length ? readFor : null });
 		this.warmSoon(shipped[0]);
 		return engines[0] ?? null;
 	}

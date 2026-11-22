@@ -326,8 +326,8 @@ export const PATCHES = [
 	},
 	{
 		file: "src/app/core/services/analysis-draft.store.ts",
-		why: "Mobile: one page at a time, so the board's unsaved work is kept in one slot that outlives the app's process (a session id is new at every start), and the board shows it again when the app is opened (install.ts).",
-		find: "\t\t\tconst existing = sessionStorage.getItem(TAB_KEY);\n",
-		replace: "\t\t\tconst existing = window.premovedDesktop?.platform === 'android' ? 'mobile' : sessionStorage.getItem(TAB_KEY);\n",
+		why: "Mobile: one page at a time, so the board's unsaved work is kept in one slot that outlives the app's process (the tab id is new at every start), and the board shows it again when the app is opened (install.ts).",
+		find: "\t\treturn owner.length > 0 ? owner : this.tabId();\n",
+		replace: "\t\t// Mobile: always the same slot. The page's tab id is new at every start (no tabs are restored).\n\t\treturn window.premovedDesktop?.platform === 'android' ? 'mobile' : owner.length > 0 ? owner : this.tabId();\n",
 	},
 ];
