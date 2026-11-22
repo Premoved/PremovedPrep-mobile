@@ -89,15 +89,20 @@ export class Engines {
 		}
 		const engines = [];
 		// One after another: two engines starting at once on a phone slow each other's answer.
+		let complete = true;
 		for (const bundledId of shipped) {
+			const before = known.find((engine) => engine.bundled === true && (engine.bundledId ?? 'stockfish') === bundledId);
 			let probed;
 			try {
 				probed = await this.probe(bundledId);
 			} catch (error) {
 				console.error(`The bundled engine ${bundledId} did not start`, error);
+				complete = false;
+				// Slow to answer this once (the app starting, a busy device): one read before stays listed; an
+				// engine never read is listed by its name, and read again at the next start.
+				engines.push(before ?? { id: this.settings.takeEngineId(), name: NAMES[bundledId] ?? bundledId, bundled: true, bundledId });
 				continue;
 			}
-			const before = known.find((engine) => engine.bundled === true && (engine.bundledId ?? 'stockfish') === bundledId);
 			engines.push({
 				id: before ? before.id : this.settings.takeEngineId(),
 				name: probed.reportedName ?? NAMES[bundledId] ?? bundledId,
@@ -107,7 +112,7 @@ export class Engines {
 			});
 		}
 		// Read again at the next start if one of them did not answer.
-		this.settings.update({ engines, enginesReadFor: engines.length === shipped.length ? readFor : null });
+		this.settings.update({ engines, enginesReadFor: complete ? readFor : null });
 		this.warmSoon(shipped[0]);
 		return engines[0] ?? null;
 	}
