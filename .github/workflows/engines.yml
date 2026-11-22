@@ -73,8 +73,22 @@ jobs:
           endian = 'little'
           CROSS
           cd lc0
-          meson setup build --cross-file ../android-arm64.txt --buildtype release -Ddefault_library=static \
-            -Dgtest=false -Dembed=true -Dopenblas=false -Deigen=true \
+          # The CPU backend with Eigen (always part of its BLAS block), every other backend off; each option
+          # only if this version of Lc0 has it.
+          options_file=meson_options.txt
+          [ -f meson.options ] && options_file=meson.options
+          cat "$options_file"
+          opts=()
+          for pair in gtest:false embed:true openblas:false mkl:false dnnl:false accelerate:false opencl:false \
+                      cudnn:false plain_cuda:false cutlass:false dx:false onnx:false onednn:false xla:false \
+                      sycl:false metal:false tensorflow:false ispc:false neon:false hip:false corex:false; do
+            name="${pair%%:*}"
+            if grep -q "option('$name'" "$options_file"; then
+              opts+=("-D$name=${pair#*:}")
+            fi
+          done
+          echo "Options: ${opts[*]}"
+          meson setup build --cross-file ../android-arm64.txt --buildtype release -Ddefault_library=static "${opts[@]}" \
             -Dcpp_link_args="['-static-libstdc++','-Wl,-z,max-page-size=16384']" \
             -Dc_link_args="['-Wl,-z,max-page-size=16384']"
           ninja -C build lc0

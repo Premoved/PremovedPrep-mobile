@@ -35,6 +35,9 @@ def append_network(official, built, out):
         raise SystemExit(f'{official}: no gzip network after the ELF image')
     with open(built, 'rb') as f:
         binary = f.read()
+    # The official one ends with the network's size and "Lc0!", which Lc0 reads from the end of its own file.
+    if network[-4:] != b'Lc0!':
+        raise SystemExit(f'{official}: no "Lc0!" mark after the network')
     with open(out, 'wb') as f:
         f.write(binary)
         f.write(network)
