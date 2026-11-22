@@ -168,7 +168,7 @@ if (CHECK) {
 }
 await bundleShell();
 copyWasm();
-writeThirdParty({ desktop: DESKTOP, root: ROOT, out: OUT, fail });
+writeThirdParty({ root: ROOT, out: OUT, fail });
 writeVersion(desktop);
 console.log(
 	`prepare: .build/ ready from PremovedPrep-App ${desktop.version}${desktop.commit ? ` (${desktop.commit})` : ''}.`,
